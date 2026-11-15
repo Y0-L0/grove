@@ -19,121 +19,126 @@ type pruneCandidateJSON struct {
 }
 
 func TestPruneListsOldWorkspacesWithoutDeleting(t *testing.T) {
-	env := newEnv(t)
-	env.createRepo("svc-auth")
-	env.init()
-	env.mustGW("create", "old-ws", "--branch", "feat/old", "--repos", "svc-auth")
-	env.mustGW("create", "fresh-ws", "--branch", "feat/fresh", "--repos", "svc-auth")
-	env.backdateWorkspace("old-ws", 10*24*time.Hour)
+	forEachUser(t, func(t *testing.T, env *env) {
+		env.createRepo("svc-auth")
+		env.init()
+		env.mustGW("create", "old-ws", "--branch", env.branch("feat/old"), "--repos", "svc-auth")
+		env.mustGW("create", "fresh-ws", "--branch", env.branch("feat/fresh"), "--repos", "svc-auth")
+		env.backdateWorkspace("old-ws", 10*24*time.Hour)
 
-	res := env.mustGW("prune", "--json")
-	got := decodeJSON[[]pruneCandidateJSON](t, res.stdout)
-	if len(got) != 1 || got[0].Name != "old-ws" {
-		t.Fatalf("prune --json = %+v, want only old-ws", got)
-	}
-	if workspaceNamed(env.listWorkspaces(), "old-ws") == nil {
-		t.Fatal("dry-run prune deleted old-ws")
-	}
-	env.requireExists(env.workspacePath("old-ws"))
+		res := env.mustGW("prune", "--json")
+		got := decodeJSON[[]pruneCandidateJSON](t, res.stdout)
+		if len(got) != 1 || got[0].Name != "old-ws" {
+			t.Fatalf("prune --json = %+v, want only old-ws", got)
+		}
+		if workspaceNamed(env.listWorkspaces(), "old-ws") == nil {
+			t.Fatal("dry-run prune deleted old-ws")
+		}
+		env.requireExists(env.workspacePath("old-ws"))
+	})
 }
 
 func TestPruneYesDeletesOldWorkspaces(t *testing.T) {
-	env := newEnv(t)
-	env.createRepo("svc-auth")
-	env.init()
-	env.mustGW("create", "old-ws", "--branch", "feat/old", "--repos", "svc-auth")
-	env.mustGW("create", "fresh-ws", "--branch", "feat/fresh", "--repos", "svc-auth")
-	env.backdateWorkspace("old-ws", 10*24*time.Hour)
+	forEachUser(t, func(t *testing.T, env *env) {
+		env.createRepo("svc-auth")
+		env.init()
+		env.mustGW("create", "old-ws", "--branch", env.branch("feat/old"), "--repos", "svc-auth")
+		env.mustGW("create", "fresh-ws", "--branch", env.branch("feat/fresh"), "--repos", "svc-auth")
+		env.backdateWorkspace("old-ws", 10*24*time.Hour)
 
-	env.mustGW("prune", "--yes")
+		env.mustGW("prune", "--yes")
 
-	if workspaceNamed(env.listWorkspaces(), "old-ws") != nil {
-		t.Fatal("old-ws still listed after prune --yes")
-	}
-	if workspaceNamed(env.listWorkspaces(), "fresh-ws") == nil {
-		t.Fatal("fresh-ws should be kept")
-	}
-	env.requireMissing(env.workspacePath("old-ws"))
-	env.requireExists(env.workspacePath("fresh-ws"))
-	if env.branchExists(filepath.Join(env.reposDir, "svc-auth"), "feat/old") {
-		t.Fatal("branch feat/old still present in source repo")
-	}
+		if workspaceNamed(env.listWorkspaces(), "old-ws") != nil {
+			t.Fatal("old-ws still listed after prune --yes")
+		}
+		if workspaceNamed(env.listWorkspaces(), "fresh-ws") == nil {
+			t.Fatal("fresh-ws should be kept")
+		}
+		env.requireMissing(env.workspacePath("old-ws"))
+		env.requireExists(env.workspacePath("fresh-ws"))
+		if env.branchExists(filepath.Join(env.reposDir, "svc-auth"), env.branch("feat/old")) {
+			t.Fatalf("branch %s still present in source repo", env.branch("feat/old"))
+		}
+	})
 }
 
 func TestPruneDefaultMinAgeKeepsRecentWorkspaces(t *testing.T) {
-	env := newEnv(t)
-	env.createRepo("svc-auth")
-	env.init()
-	env.mustGW("create", "fresh-ws", "--branch", "feat/fresh", "--repos", "svc-auth")
+	forEachUser(t, func(t *testing.T, env *env) {
+		env.createRepo("svc-auth")
+		env.init()
+		env.mustGW("create", "fresh-ws", "--branch", env.branch("feat/fresh"), "--repos", "svc-auth")
 
-	res := env.mustGW("prune", "--json")
-	got := decodeJSON[[]pruneCandidateJSON](t, res.stdout)
-	if len(got) != 0 {
-		t.Fatalf("default prune listed recent workspaces: %+v", got)
-	}
+		res := env.mustGW("prune", "--json")
+		got := decodeJSON[[]pruneCandidateJSON](t, res.stdout)
+		if len(got) != 0 {
+			t.Fatalf("default prune listed recent workspaces: %+v", got)
+		}
+	})
 }
 
 func TestPruneMinAgeAcceptsUnits(t *testing.T) {
-	env := newEnv(t)
-	env.createRepo("svc-auth")
-	env.init()
-	env.mustGW("create", "old-ws", "--branch", "feat/old", "--repos", "svc-auth")
-	env.backdateWorkspace("old-ws", 10*24*time.Hour)
+	forEachUser(t, func(t *testing.T, env *env) {
+		env.createRepo("svc-auth")
+		env.init()
+		env.mustGW("create", "old-ws", "--branch", env.branch("feat/old"), "--repos", "svc-auth")
+		env.backdateWorkspace("old-ws", 10*24*time.Hour)
 
-	for _, tc := range []struct {
-		minAge string
-		want   int
-	}{
-		{"2w", 0},  // 14 days: too young
-		{"7d", 1},  // 7 days
-		{"7", 1},   // bare number means days
-		{"12h", 1}, // 12 hours
-	} {
-		res := env.mustGW("prune", "--json", "--min-age", tc.minAge)
-		got := decodeJSON[[]pruneCandidateJSON](t, res.stdout)
-		if len(got) != tc.want {
-			t.Errorf("--min-age %s: got %+v, want %d candidate(s)", tc.minAge, got, tc.want)
+		for _, tc := range []struct {
+			minAge string
+			want   int
+		}{
+			{"2w", 0},  // 14 days: too young
+			{"7d", 1},  // 7 days
+			{"7", 1},   // bare number means days
+			{"12h", 1}, // 12 hours
+		} {
+			res := env.mustGW("prune", "--json", "--min-age", tc.minAge)
+			got := decodeJSON[[]pruneCandidateJSON](t, res.stdout)
+			if len(got) != tc.want {
+				t.Errorf("--min-age %s: got %+v, want %d candidate(s)", tc.minAge, got, tc.want)
+			}
 		}
-	}
 
-	res := env.gw("prune", "--min-age", "7x").mustFail(t)
-	if !strings.Contains(res.combined(), "unit must be h, d, or w") {
-		t.Fatalf("unexpected error for bad unit:\n%s", res.combined())
-	}
+		res := env.gw("prune", "--min-age", "7x").mustFail(t)
+		if !strings.Contains(res.combined(), "unit must be h, d, or w") {
+			t.Fatalf("unexpected error for bad unit:\n%s", res.combined())
+		}
+	})
 }
 
 func TestPruneCleansStaleRecordWhoseDirectoryIsGone(t *testing.T) {
-	env := newEnv(t)
-	repo := env.createRepo("svc-auth")
-	env.init()
-	env.mustGW("create", "gone-ws", "--branch", "feat/gone", "--repos", "svc-auth")
-	env.mustGW("create", "fresh-ws", "--branch", "feat/fresh", "--repos", "svc-auth")
-	if err := os.RemoveAll(env.workspacePath("gone-ws")); err != nil {
-		t.Fatalf("simulate out-of-band removal: %v", err)
-	}
+	forEachUser(t, func(t *testing.T, env *env) {
+		repo := env.createRepo("svc-auth")
+		env.init()
+		env.mustGW("create", "gone-ws", "--branch", env.branch("feat/gone"), "--repos", "svc-auth")
+		env.mustGW("create", "fresh-ws", "--branch", env.branch("feat/fresh"), "--repos", "svc-auth")
+		if err := os.RemoveAll(env.workspacePath("gone-ws")); err != nil {
+			t.Fatalf("simulate out-of-band removal: %v", err)
+		}
 
-	// Listed regardless of age.
-	res := env.mustGW("prune", "--json")
-	got := decodeJSON[[]pruneCandidateJSON](t, res.stdout)
-	if len(got) != 1 || got[0].Name != "gone-ws" || !got[0].Missing {
-		t.Fatalf("prune --json = %+v, want gone-ws marked missing", got)
-	}
+		// Listed regardless of age.
+		res := env.mustGW("prune", "--json")
+		got := decodeJSON[[]pruneCandidateJSON](t, res.stdout)
+		if len(got) != 1 || got[0].Name != "gone-ws" || !got[0].Missing {
+			t.Fatalf("prune --json = %+v, want gone-ws marked missing", got)
+		}
 
-	env.mustGW("prune", "--yes")
+		env.mustGW("prune", "--yes")
 
-	if workspaceNamed(env.listWorkspaces(), "gone-ws") != nil {
-		t.Fatal("gone-ws still in state after prune --yes")
-	}
-	if workspaceNamed(env.listWorkspaces(), "fresh-ws") == nil {
-		t.Fatal("fresh-ws should be kept")
-	}
-	if strings.Contains(env.git(repo, "worktree", "list", "--porcelain"), "gone-ws") {
-		t.Fatal("stale worktree registration for gone-ws was not pruned")
-	}
-	if env.branchExists(repo, "feat/gone") {
-		t.Fatal("branch feat/gone still present in source repo")
-	}
-	env.requireMissing(filepath.Join(env.wsDir, ".trash"))
+		if workspaceNamed(env.listWorkspaces(), "gone-ws") != nil {
+			t.Fatal("gone-ws still in state after prune --yes")
+		}
+		if workspaceNamed(env.listWorkspaces(), "fresh-ws") == nil {
+			t.Fatal("fresh-ws should be kept")
+		}
+		if strings.Contains(env.git(repo, "worktree", "list", "--porcelain"), "gone-ws") {
+			t.Fatal("stale worktree registration for gone-ws was not pruned")
+		}
+		if env.branchExists(repo, env.branch("feat/gone")) {
+			t.Fatalf("branch %s still present in source repo", env.branch("feat/gone"))
+		}
+		env.requireMissing(filepath.Join(env.wsDir, ".trash"))
+	})
 }
 
 func (e *env) backdateWorkspace(name string, age time.Duration) {

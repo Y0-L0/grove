@@ -17,11 +17,34 @@ const defaultGWTimeout = 45 * time.Second
 
 type env struct {
 	t        *testing.T
+	user     userProfile
 	home     string
 	reposDir string
 	groveDir string
 	wsDir    string
 	timeout  time.Duration
+}
+
+type userProfile struct {
+	name         string
+	ownerPrefix  string
+	host         string
+	repoDir      string
+	workspaceDir string
+}
+
+var users = []userProfile{
+	{"alice", "alice", "forge.alice.test", "checkouts", "workspaces"},
+	{"bob", "bsmith", "git.bob.test", "src/repos", "dev/workspaces"},
+}
+
+func forEachUser(t *testing.T, scenario func(*testing.T, *env)) {
+	t.Helper()
+	for _, user := range users {
+		t.Run(user.name, func(t *testing.T) {
+			scenario(t, newEnv(t, user))
+		})
+	}
 }
 
 type cmdResult struct {
@@ -85,26 +108,29 @@ type pluginJSON struct {
 	Path string `json:"path"`
 }
 
-func newEnv(t *testing.T) *env {
+func newEnv(t *testing.T, user userProfile) *env {
 	t.Helper()
-	home := t.TempDir()
-	reposDir := filepath.Join(home, "repos")
+	home := filepath.Join(t.TempDir(), user.name)
+	reposDir := filepath.Join(home, user.repoDir)
 	groveDir := filepath.Join(home, ".grove")
-	wsDir := filepath.Join(groveDir, "workspaces")
+	wsDir := filepath.Join(home, user.workspaceDir)
 	if err := os.MkdirAll(reposDir, 0o755); err != nil {
 		t.Fatalf("mkdir repos: %v", err)
 	}
 	e := &env{
 		t:        t,
+		user:     user,
 		home:     home,
 		reposDir: reposDir,
 		groveDir: groveDir,
 		wsDir:    wsDir,
 		timeout:  defaultGWTimeout,
 	}
-	e.git(home, "config", "--global", "user.email", "e2e@grove.test")
-	e.git(home, "config", "--global", "user.name", "Grove E2E")
+	e.git(home, "config", "--global", "user.email", user.name+"@"+user.host)
+	e.git(home, "config", "--global", "user.name", user.name)
 	e.git(home, "config", "--global", "init.defaultBranch", "main")
+	// Exercise distinct forge URLs without making network requests.
+	e.git(home, "config", "--global", "url."+fileURL(home)+"/.insteadOf", "https://"+user.host+"/")
 	// gw delete/prune spawn unlink-trash in the background. Wait for it before
 	// t.TempDir cleanup, otherwise Linux RemoveAll fails with ENOTEMPTY on .grove.
 	t.Cleanup(e.waitForBackgroundUnlink)
@@ -135,14 +161,17 @@ func (e *env) waitForBackgroundUnlink() {
 func (e *env) init() {
 	e.t.Helper()
 	e.mustGW("init", e.reposDir)
+	e.writeConfig("")
 }
 
 func (e *env) cmdEnv() []string {
 	env := os.Environ()
-	out := make([]string, 0, len(env)+4)
+	out := make([]string, 0, len(env)+5)
 	for _, kv := range env {
 		switch {
 		case strings.HasPrefix(kv, "HOME="),
+			strings.HasPrefix(kv, "USER="),
+			strings.HasPrefix(kv, "LOGNAME="),
 			strings.HasPrefix(kv, "GIT_DIR="),
 			strings.HasPrefix(kv, "GIT_WORK_TREE="),
 			strings.HasPrefix(kv, "GIT_INDEX_FILE="),
@@ -154,6 +183,8 @@ func (e *env) cmdEnv() []string {
 	}
 	out = append(out,
 		"HOME="+e.home,
+		"USER="+e.user.name,
+		"LOGNAME="+e.user.name,
 		"GIT_CEILING_DIRECTORIES=/",
 		"GIT_CONFIG_NOSYSTEM=1",
 	)
@@ -279,6 +310,10 @@ func (e *env) doctorIssues() []doctorIssue {
 
 func (e *env) workspacePath(name string) string {
 	return filepath.Join(e.wsDir, name)
+}
+
+func (e *env) branch(name string) string {
+	return e.user.ownerPrefix + "/" + name
 }
 
 func (e *env) worktree(workspace, repo string) string {

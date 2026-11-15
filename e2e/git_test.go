@@ -41,7 +41,7 @@ func (e *env) createRepoWithHistory(name string, commits int) string {
 	origin := filepath.Join(e.home, name+"-origin.git")
 	path := filepath.Join(e.reposDir, name)
 	e.git(e.home, "init", "-q", "--bare", origin)
-	e.git(e.home, "clone", "-q", origin, path)
+	e.git(e.home, "clone", "-q", e.remoteURL(origin), path)
 	for i := 1; i <= commits; i++ {
 		e.writeFile(filepath.Join(path, "README.md"), strings.Repeat("v\n", i))
 		e.git(path, "add", ".")
@@ -139,4 +139,8 @@ func fileURL(path string) string {
 		return "file://" + path
 	}
 	return "file://" + abs
+}
+
+func (e *env) remoteURL(origin string) string {
+	return "https://" + e.user.host + "/" + filepath.Base(origin)
 }
