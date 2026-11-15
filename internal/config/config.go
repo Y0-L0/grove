@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 	"github.com/nicksenap/grove/internal/console"
@@ -58,8 +59,26 @@ func Load() (*models.Config, error) {
 	if cfg.WorkspaceDir == "" {
 		cfg.WorkspaceDir = DefaultWorkspaceDir
 	}
+	if cfg.StateDir == "" {
+		cfg.StateDir = GroveDir
+	}
+	if strings.HasPrefix(cfg.StateDir, "~/") {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return nil, fmt.Errorf("resolving state directory: %w", err)
+		}
+		cfg.StateDir = filepath.Join(home, cfg.StateDir[2:])
+	}
 
 	return &cfg, nil
+}
+
+// StateDir returns the configured state directory, defaulting to GroveDir.
+func StateDir() string {
+	if cfg, err := Load(); err == nil && cfg != nil {
+		return cfg.StateDir
+	}
+	return GroveDir
 }
 
 // RequireConfig loads config and exits if not initialized.

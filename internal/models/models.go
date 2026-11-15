@@ -88,6 +88,7 @@ type Preset struct {
 type Config struct {
 	RepoDirs     []string          `toml:"repo_dirs"`
 	WorkspaceDir string            `toml:"workspace_dir"`
+	StateDir     string            `toml:"state_dir,omitempty"`
 	Presets      map[string]Preset `toml:"presets"`
 	Hooks        map[string]Hook   `toml:"hooks"`
 	// Legacy field — auto-migrated to RepoDirs

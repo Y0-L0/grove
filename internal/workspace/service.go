@@ -33,7 +33,7 @@ func NewService() *Service {
 		wsDir = cfg.WorkspaceDir
 	}
 	return &Service{
-		State:        state.NewStore(config.GroveDir),
+		State:        state.NewStore(config.StateDir()),
 		Stats:        stats.NewTracker(config.GroveDir),
 		WorkspaceDir: wsDir,
 		RunCmd:       prodRunCmd,

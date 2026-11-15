@@ -175,7 +175,7 @@ func (s *Store) FindWorkspaceByPath(path string) (*models.Workspace, error) {
 	return nil, nil
 }
 
-// --- Package-level convenience functions using config.GroveDir ---
+// --- Package-level convenience functions using config.StateDir ---
 // These delegate to a Store created from the global config.
 // CLI code can use these; test code should create Store directly.
 
@@ -183,10 +183,11 @@ var cachedStore *Store
 var cachedStoreDir string
 
 func defaultStore() *Store {
-	// Re-create if GroveDir changed (tests patch config.GroveDir)
-	if cachedStore == nil || cachedStoreDir != config.GroveDir {
-		cachedStore = NewStore(config.GroveDir)
-		cachedStoreDir = config.GroveDir
+	// Re-create if the configured state directory changed.
+	dir := config.StateDir()
+	if cachedStore == nil || cachedStoreDir != dir {
+		cachedStore = NewStore(dir)
+		cachedStoreDir = dir
 	}
 	return cachedStore
 }

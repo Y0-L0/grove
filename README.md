@@ -156,6 +156,14 @@ To namespace your branches, add a `resolve_branch` hook to `~/.grove/config.toml
 resolve_branch = "echo nick/{branch}"
 ```
 
+To store `state.json` and `state.lock` separately from the configuration,
+set `state_dir` at the top level of `~/.grove/config.toml`.
+It defaults to `~/.grove` and supports paths beginning with `~/`.
+
+```toml
+state_dir = "~/grove-state"
+```
+
 Presets, plugins, hooks, and the full command reference are covered in [Workflows](openwiki/workflows.md) and [Operations](openwiki/operations.md).
 
 ### Integrations

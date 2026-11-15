@@ -64,6 +64,41 @@ func TestSaveAndLoad(t *testing.T) {
 	}
 }
 
+func TestStateDirRoundTrip(t *testing.T) {
+	setupTestEnv(t)
+	if err := os.WriteFile(ConfigPath, []byte("state_dir = \"/var/lib/grove\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	if err := Save(cfg); err != nil {
+		t.Fatalf("save: %v", err)
+	}
+	data, err := os.ReadFile(ConfigPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), "state_dir = \"/var/lib/grove\"") {
+		t.Errorf("state_dir lost after load and save:\n%s", data)
+	}
+}
+
+func TestDefaultStateDir(t *testing.T) {
+	setupTestEnv(t)
+	if err := Save(&models.Config{}); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.StateDir != GroveDir {
+		t.Errorf("state_dir = %q, want %q", cfg.StateDir, GroveDir)
+	}
+}
+
 func TestSaveAndLoadWithPresets(t *testing.T) {
 	setupTestEnv(t)
 

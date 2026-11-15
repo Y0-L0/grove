@@ -83,7 +83,7 @@ func pluginEnv() []string {
 	// Deprecated: state.json is a private format. GROVE_STATE is still set so
 	// existing plugins keep working, and will be removed in a later release.
 	// Plugins should read workspaces with `gw list -o json` / `gw ws show -o json`.
-	set("GROVE_STATE", filepath.Join(config.GroveDir, "state.json"))
+	set("GROVE_STATE", filepath.Join(config.StateDir(), "state.json"))
 
 	// Try to detect current workspace from cwd
 	if ws := detectWorkspace(); ws != "" {
