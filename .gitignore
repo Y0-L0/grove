@@ -15,5 +15,4 @@ dist/
 brag-output/
 
 # OpenWiki local artifacts
-CLAUDE.md
 openwiki/.claims/
