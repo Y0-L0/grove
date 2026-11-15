@@ -71,3 +71,9 @@ This repository has a generated `openwiki/` evidence index ([quickstart](openwik
 No workflow refreshes the wiki; regenerate it manually with `openwiki code --update` and ship that as its own docs-only PR, never mixed into code changes. Do not hand-edit generated OpenWiki pages unless explicitly asked; update source code/docs and regenerate.
 
 <!-- OPENWIKI:END -->
+
+## This fork
+
+This branch is a fork of `nicksenap/grove` for the task workflow under `~/git/agent/`.
+Its commits end with `Assisted-by: Claude:<model>`, such as `Assisted-by: Claude:claude-opus-5-5`,
+instead of the issue reference the workflow's `AGENTS.md` asks for.
