@@ -29,11 +29,13 @@ type Service struct {
 // NewService creates a Service with production dependencies.
 func NewService() *Service {
 	wsDir := config.DefaultWorkspaceDir
-	if cfg, err := config.Load(); err == nil && cfg != nil && cfg.WorkspaceDir != "" {
+	stateDir := config.GroveDir
+	if cfg, err := config.Load(); err == nil && cfg != nil {
 		wsDir = cfg.WorkspaceDir
+		stateDir = cfg.StateDir
 	}
 	return &Service{
-		State:        state.NewStore(config.StateDir()),
+		State:        state.NewStore(stateDir),
 		Stats:        stats.NewTracker(config.GroveDir),
 		WorkspaceDir: wsDir,
 		RunCmd:       prodRunCmd,

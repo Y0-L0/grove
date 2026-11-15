@@ -73,15 +73,18 @@ func TestStateDirRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load: %v", err)
 	}
+	if cfg.StateDir != "/var/lib/grove" {
+		t.Errorf("state_dir = %q, want /var/lib/grove", cfg.StateDir)
+	}
 	if err := Save(cfg); err != nil {
 		t.Fatalf("save: %v", err)
 	}
-	data, err := os.ReadFile(ConfigPath)
+	loaded, err := Load()
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("reload: %v", err)
 	}
-	if !strings.Contains(string(data), "state_dir = \"/var/lib/grove\"") {
-		t.Errorf("state_dir lost after load and save:\n%s", data)
+	if loaded.StateDir != "/var/lib/grove" {
+		t.Errorf("state_dir after save = %q, want /var/lib/grove", loaded.StateDir)
 	}
 }
 

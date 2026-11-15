@@ -17,9 +17,9 @@ type Store struct {
 	Path string // path to state.json
 }
 
-// NewStore creates a Store using the given grove dir.
-func NewStore(groveDir string) *Store {
-	return &Store{Path: filepath.Join(groveDir, "state.json")}
+// NewStore creates a Store using the given state directory.
+func NewStore(stateDir string) *Store {
+	return &Store{Path: filepath.Join(stateDir, "state.json")}
 }
 
 // Load reads all workspaces from state.json.
