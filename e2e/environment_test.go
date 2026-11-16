@@ -23,6 +23,7 @@ type env struct {
 	groveDir string
 	wsDir    string
 	timeout  time.Duration
+	bin      string
 }
 
 type userProfile struct {
@@ -125,6 +126,7 @@ func newEnv(t *testing.T, user userProfile) *env {
 		groveDir: groveDir,
 		wsDir:    wsDir,
 		timeout:  defaultGWTimeout,
+		bin:      gwBin,
 	}
 	e.git(home, "config", "--global", "user.email", user.name+"@"+user.host)
 	e.git(home, "config", "--global", "user.name", user.name)
@@ -195,7 +197,7 @@ func (e *env) runGW(dir string, args ...string) cmdResult {
 	e.t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), e.timeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, gwBin, args...)
+	cmd := exec.CommandContext(ctx, e.bin, args...)
 	if dir != "" {
 		cmd.Dir = dir
 	} else {

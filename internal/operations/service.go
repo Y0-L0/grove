@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 
 	"github.com/nicksenap/grove/internal/console"
-	"github.com/nicksenap/grove/internal/gitops"
 	"github.com/nicksenap/grove/internal/lifecycle"
 	"github.com/nicksenap/grove/internal/models"
 	"github.com/nicksenap/grove/internal/workspace"
@@ -35,21 +34,18 @@ var ErrHookNotConfigured = errors.New("required lifecycle hook not configured")
 type Service struct {
 	Workspace WorkspaceService
 	Store     WorkspaceStore
-	RunHook   func(string, lifecycle.Vars) error
-	// ResolveHook runs value-returning hooks (resolve_branch).
-	ResolveHook func(string, lifecycle.Vars) (string, error)
-	Warn        func(string)
+	Hooks     []Hooks
+	Warn      func(string)
 }
 
 // NewService creates an operation service with production dependencies.
 func NewService() *Service {
 	workspaceService := workspace.NewService()
 	return &Service{
-		Workspace:   workspaceService,
-		Store:       workspaceService.State,
-		RunHook:     lifecycle.Run,
-		ResolveHook: lifecycle.Resolve,
-		Warn:        console.Warning,
+		Workspace: workspaceService,
+		Store:     workspaceService.State,
+		Hooks:     append([]Hooks{}, registeredHooks...),
+		Warn:      console.Warning,
 	}
 }
 
@@ -118,7 +114,7 @@ func (s *Service) Create(req CreateRequest) (CreateResult, error) {
 		return result, fmt.Errorf("created workspace %s not found in state", req.Name)
 	}
 	result.Workspace = *ws
-	if err := s.runHook("post_create", lifecycleVars(*ws)); err != nil {
+	if err := s.runHooks(func(h Hooks) error { return h.PostCreate(*ws) }); err != nil {
 		return result, &HookError{Hook: "post_create", Err: err}
 	}
 	return result, nil
@@ -145,7 +141,7 @@ func (s *Service) AddRepos(req AddReposRequest) error {
 	if ws == nil {
 		return fmt.Errorf("workspace %s not found in state", req.Name)
 	}
-	if err := s.runHook("post_add_repo", lifecycleVars(*ws)); err != nil {
+	if err := s.runHooks(func(h Hooks) error { return h.PostAddRepo(*ws) }); err != nil {
 		return &HookError{Hook: "post_add_repo", Err: err}
 	}
 	return nil
@@ -173,7 +169,7 @@ func (s *Service) Delete(req DeleteRequest) (DeleteResult, error) {
 		return DeleteResult{}, fmt.Errorf("workspace %s not found", req.Name)
 	}
 	result := DeleteResult{Workspace: *ws}
-	if err := s.runHook("pre_delete", lifecycleVars(*ws)); err != nil {
+	if err := s.runHooks(func(h Hooks) error { return h.PreDelete(*ws) }); err != nil {
 		return result, &HookError{Hook: "pre_delete", Err: err}
 	}
 	req.Options.ExpectedCreatedAt = ws.CreatedAt
@@ -195,57 +191,23 @@ type CloseResult struct {
 
 // Close invokes the required on_close hook through operation-level policy.
 func (s *Service) Close(CloseRequest) (CloseResult, error) {
-	err := s.callHook("on_close", lifecycle.Vars{})
-	if errors.Is(err, lifecycle.ErrNoHook) {
+	configured := false
+	if !lifecycle.Disabled {
+		for _, h := range s.hooks() {
+			err := h.OnClose()
+			if errors.Is(err, lifecycle.ErrNoHook) {
+				continue
+			}
+			if err != nil {
+				return CloseResult{}, &HookError{Hook: "on_close", Err: err}
+			}
+			configured = true
+		}
+	}
+	if !configured {
 		return CloseResult{}, fmt.Errorf("%w: on_close", ErrHookNotConfigured)
 	}
-	if err != nil {
-		return CloseResult{}, &HookError{Hook: "on_close", Err: err}
-	}
 	return CloseResult{Closed: true}, nil
-}
-
-func (s *Service) runHook(name string, vars lifecycle.Vars) error {
-	err := s.callHook(name, vars)
-	if err == nil || errors.Is(err, lifecycle.ErrNoHook) {
-		return nil
-	}
-	if lifecycle.ShouldAbort(err) {
-		return err
-	}
-	s.warn(err)
-	return nil
-}
-
-// callResolver returns the branch produced by the resolve_branch hook, or the
-// typed branch unchanged when no resolver is configured (or hooks are off).
-// {path} is empty: the workspace does not exist yet.
-func (s *Service) callResolver(req CreateRequest) (string, error) {
-	resolve := s.ResolveHook
-	if resolve == nil {
-		resolve = lifecycle.Resolve
-	}
-	opts := req.Options
-	vars := lifecycleVars(models.Workspace{Name: req.Name, Branch: opts.Branch, Source: opts.Source})
-	branch, err := resolve("resolve_branch", vars)
-	if errors.Is(err, lifecycle.ErrNoHook) {
-		return req.Options.Branch, nil
-	}
-	if err != nil {
-		return "", err
-	}
-	if err := gitops.CheckBranchName(branch); err != nil {
-		return "", fmt.Errorf("resolve_branch hook output: %w", err)
-	}
-	return branch, nil
-}
-
-func (s *Service) callHook(name string, vars lifecycle.Vars) error {
-	runHook := s.RunHook
-	if runHook == nil {
-		runHook = lifecycle.Run
-	}
-	return runHook(name, vars)
 }
 
 func (s *Service) warn(err error) {
@@ -263,14 +225,4 @@ func expectedWorkspace(req CreateRequest) models.Workspace {
 		ws.Path = filepath.Join(opts.Cfg.WorkspaceDir, req.Name)
 	}
 	return ws
-}
-
-func lifecycleVars(ws models.Workspace) lifecycle.Vars {
-	vars := lifecycle.Vars{Name: ws.Name, Path: ws.Path, Branch: ws.Branch}
-	if ws.Source != nil {
-		vars.SourceURL = ws.Source.URL
-		vars.SourceRef = ws.Source.Ref
-		vars.SourceTitle = ws.Source.Title
-	}
-	return vars
 }

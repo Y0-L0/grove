@@ -16,13 +16,13 @@ func TestCreateRunsPostCreateAfterWorkspaceCreation(t *testing.T) {
 	svc := Service{
 		Workspace: deps,
 		Store:     deps,
-		RunHook: func(name string, vars lifecycle.Vars) error {
+		Hooks: []Hooks{testShellHooks{run: func(name string, vars lifecycle.Vars) error {
 			order = append(order, "hook:"+name)
 			if vars.Name != ws.Name || vars.Path != ws.Path || vars.Branch != ws.Branch {
 				t.Fatalf("unexpected hook vars: %+v", vars)
 			}
 			return nil
-		},
+		}}},
 	}
 
 	result, err := svc.Create(CreateRequest{Name: ws.Name, Options: workspace.CreateOpts{Branch: ws.Branch}})
@@ -42,13 +42,13 @@ func TestAddReposRunsPostAddRepoAfterReposAreAdded(t *testing.T) {
 	svc := Service{
 		Workspace: deps,
 		Store:     deps,
-		RunHook: func(name string, vars lifecycle.Vars) error {
+		Hooks: []Hooks{testShellHooks{run: func(name string, vars lifecycle.Vars) error {
 			order = append(order, "hook:"+name)
 			if vars.Name != ws.Name || vars.Path != ws.Path || vars.Branch != ws.Branch {
 				t.Fatalf("unexpected hook vars: %+v", vars)
 			}
 			return nil
-		},
+		}}},
 	}
 
 	if err := svc.AddRepos(AddReposRequest{Name: ws.Name, Repos: []string{"web"}}); err != nil {
@@ -63,10 +63,10 @@ func TestAddReposSkipsHookWhenNothingWasAdded(t *testing.T) {
 	svc := Service{
 		Workspace: deps,
 		Store:     deps,
-		RunHook: func(name string, _ lifecycle.Vars) error {
+		Hooks: []Hooks{testShellHooks{run: func(name string, _ lifecycle.Vars) error {
 			order = append(order, "hook:"+name)
 			return nil
-		},
+		}}},
 	}
 
 	if err := svc.AddRepos(AddReposRequest{Name: "feature", Repos: []string{"web"}}); err != nil {
@@ -81,9 +81,9 @@ func TestAddReposAbortingHookIsAHookError(t *testing.T) {
 	svc := Service{
 		Workspace: deps,
 		Store:     deps,
-		RunHook: func(name string, _ lifecycle.Vars) error {
+		Hooks: []Hooks{testShellHooks{run: func(name string, _ lifecycle.Vars) error {
 			return &lifecycle.HookError{Hook: name, Err: errors.New("boom"), Abort: true}
-		},
+		}}},
 	}
 
 	err := svc.AddRepos(AddReposRequest{Name: "feature", Repos: []string{"web"}})
@@ -99,14 +99,14 @@ func TestCreateUsesResolvedBranch(t *testing.T) {
 	svc := Service{
 		Workspace: deps,
 		Store:     deps,
-		RunHook:   func(string, lifecycle.Vars) error { return nil },
-		ResolveHook: func(name string, vars lifecycle.Vars) (string, error) {
-			order = append(order, "resolve:"+name)
-			if vars.Branch != "feat-x" || vars.Name != "feat-x" {
-				t.Fatalf("unexpected resolve vars: %+v", vars)
-			}
-			return "erebe/feat-x", nil
-		},
+		Hooks: []Hooks{testShellHooks{run: func(string, lifecycle.Vars) error { return nil },
+			resolve: func(name string, vars lifecycle.Vars) (string, error) {
+				order = append(order, "resolve:"+name)
+				if vars.Branch != "feat-x" || vars.Name != "feat-x" {
+					t.Fatalf("unexpected resolve vars: %+v", vars)
+				}
+				return "erebe/feat-x", nil
+			}}},
 	}
 
 	if _, err := svc.Create(CreateRequest{Name: "feat-x", Options: workspace.CreateOpts{Branch: "feat-x"}}); err != nil {
@@ -125,11 +125,11 @@ func TestResolverReceivesSourcePlaceholders(t *testing.T) {
 	svc := Service{
 		Workspace: deps,
 		Store:     deps,
-		RunHook:   func(string, lifecycle.Vars) error { return nil },
-		ResolveHook: func(_ string, vars lifecycle.Vars) (string, error) {
-			got = vars
-			return "pr-42", nil
-		},
+		Hooks: []Hooks{testShellHooks{run: func(string, lifecycle.Vars) error { return nil },
+			resolve: func(_ string, vars lifecycle.Vars) (string, error) {
+				got = vars
+				return "pr-42", nil
+			}}},
 	}
 
 	src := &models.WorkspaceSource{URL: "https://example.com/pr/42", Ref: "42", Title: "Fix login"}
@@ -145,10 +145,10 @@ func TestCreateKeepsBranchWhenResolverUnset(t *testing.T) {
 	var order []string
 	deps := &fakeWorkspace{workspace: models.Workspace{Name: "feat-x"}, order: &order}
 	svc := Service{
-		Workspace:   deps,
-		Store:       deps,
-		RunHook:     func(string, lifecycle.Vars) error { return nil },
-		ResolveHook: func(string, lifecycle.Vars) (string, error) { return "", lifecycle.ErrNoHook },
+		Workspace: deps,
+		Store:     deps,
+		Hooks: []Hooks{testShellHooks{run: func(string, lifecycle.Vars) error { return nil },
+			resolve: func(string, lifecycle.Vars) (string, error) { return "", lifecycle.ErrNoHook }}},
 	}
 
 	if _, err := svc.Create(CreateRequest{Name: "feat-x", Options: workspace.CreateOpts{Branch: "feat-x"}}); err != nil {
@@ -165,11 +165,11 @@ func TestCreateTrackSkipsResolver(t *testing.T) {
 	svc := Service{
 		Workspace: deps,
 		Store:     deps,
-		RunHook:   func(string, lifecycle.Vars) error { return nil },
-		ResolveHook: func(string, lifecycle.Vars) (string, error) {
-			t.Fatal("resolver must not run with --track")
-			return "", nil
-		},
+		Hooks: []Hooks{testShellHooks{run: func(string, lifecycle.Vars) error { return nil },
+			resolve: func(string, lifecycle.Vars) (string, error) {
+				t.Fatal("resolver must not run with --track")
+				return "", nil
+			}}},
 	}
 
 	opts := workspace.CreateOpts{Branch: "someone/pr-head", BranchMode: workspace.BranchModeTrack}
@@ -187,11 +187,11 @@ func TestResolveBranchThenCreateResolvesOnce(t *testing.T) {
 	svc := Service{
 		Workspace: deps,
 		Store:     deps,
-		RunHook:   func(string, lifecycle.Vars) error { return nil },
-		ResolveHook: func(name string, _ lifecycle.Vars) (string, error) {
-			order = append(order, "resolve")
-			return "erebe/feat-x", nil
-		},
+		Hooks: []Hooks{testShellHooks{run: func(string, lifecycle.Vars) error { return nil },
+			resolve: func(name string, _ lifecycle.Vars) (string, error) {
+				order = append(order, "resolve")
+				return "erebe/feat-x", nil
+			}}},
 	}
 
 	req := CreateRequest{Name: "feat-x", Options: workspace.CreateOpts{Branch: "feat-x"}}
@@ -221,8 +221,12 @@ func TestCreateResolverFailureAbortsBeforeCreate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			var order []string
 			deps := &fakeWorkspace{workspace: models.Workspace{Name: "feat-x"}, order: &order}
-			svc := Service{Workspace: deps, Store: deps, ResolveHook: resolve,
-				RunHook: func(string, lifecycle.Vars) error { return nil }}
+			svc := Service{
+				Workspace: deps,
+				Store:     deps,
+				Hooks: []Hooks{testShellHooks{resolve: resolve,
+					run: func(string, lifecycle.Vars) error { return nil }}},
+			}
 
 			result, err := svc.Create(CreateRequest{Name: "feat-x", Options: workspace.CreateOpts{Branch: "feat-x"}})
 			var hookErr *HookError
@@ -241,7 +245,11 @@ func TestDeleteAbortingPreDeletePreventsDeletion(t *testing.T) {
 	ws := models.Workspace{Name: "feature", Path: "/workspaces/feature", Branch: "feat/feature"}
 	deps := &fakeWorkspace{workspace: ws, order: &order}
 	hookErr := &lifecycle.HookError{Hook: "pre_delete", Err: errors.New("blocked"), Abort: true}
-	svc := Service{Workspace: deps, Store: deps, RunHook: func(string, lifecycle.Vars) error { order = append(order, "hook"); return hookErr }}
+	svc := Service{
+		Workspace: deps,
+		Store:     deps,
+		Hooks:     []Hooks{testShellHooks{run: func(string, lifecycle.Vars) error { order = append(order, "hook"); return hookErr }}},
+	}
 
 	result, err := svc.Delete(DeleteRequest{Name: ws.Name, Options: workspace.RemoveOptions{Force: true}})
 	var operationHookErr *HookError
@@ -263,8 +271,8 @@ func TestDeleteWarningContinuesAndReportsWarning(t *testing.T) {
 	svc := Service{
 		Workspace: deps,
 		Store:     deps,
-		RunHook:   func(string, lifecycle.Vars) error { order = append(order, "hook"); return hookErr },
 		Warn:      func(message string) { warnings = append(warnings, message) },
+		Hooks:     []Hooks{testShellHooks{run: func(string, lifecycle.Vars) error { order = append(order, "hook"); return hookErr }}},
 	}
 
 	result, err := svc.Delete(DeleteRequest{Name: ws.Name})
@@ -281,7 +289,11 @@ func TestNoHookBypassesLifecycleForCreateAndDelete(t *testing.T) {
 	var order []string
 	ws := models.Workspace{Name: "feature", Path: "/workspaces/feature", Branch: "feat/feature"}
 	deps := &fakeWorkspace{workspace: ws, order: &order}
-	svc := Service{Workspace: deps, Store: deps, RunHook: func(string, lifecycle.Vars) error { return lifecycle.ErrNoHook }}
+	svc := Service{
+		Workspace: deps,
+		Store:     deps,
+		Hooks:     []Hooks{testShellHooks{run: func(string, lifecycle.Vars) error { return lifecycle.ErrNoHook }}},
+	}
 
 	if _, err := svc.Create(CreateRequest{Name: ws.Name}); err != nil {
 		t.Fatal(err)
@@ -293,7 +305,9 @@ func TestNoHookBypassesLifecycleForCreateAndDelete(t *testing.T) {
 }
 
 func TestCloseRequiresConfiguredHook(t *testing.T) {
-	svc := Service{RunHook: func(string, lifecycle.Vars) error { return lifecycle.ErrNoHook }}
+	svc := Service{
+		Hooks: []Hooks{testShellHooks{run: func(string, lifecycle.Vars) error { return lifecycle.ErrNoHook }}},
+	}
 
 	result, err := svc.Close(CloseRequest{})
 	if !errors.Is(err, ErrHookNotConfigured) || result.Closed {
@@ -303,12 +317,14 @@ func TestCloseRequiresConfiguredHook(t *testing.T) {
 
 func TestCloseReturnsOnCloseFailure(t *testing.T) {
 	hookErr := &lifecycle.HookError{Hook: "on_close", Err: errors.New("failed")}
-	svc := Service{RunHook: func(name string, vars lifecycle.Vars) error {
-		if name != "on_close" || vars != (lifecycle.Vars{}) {
-			t.Fatalf("unexpected hook call: %s %+v", name, vars)
-		}
-		return hookErr
-	}}
+	svc := Service{
+		Hooks: []Hooks{testShellHooks{run: func(name string, vars lifecycle.Vars) error {
+			if name != "on_close" || vars != (lifecycle.Vars{}) {
+				t.Fatalf("unexpected hook call: %s %+v", name, vars)
+			}
+			return hookErr
+		}}},
+	}
 
 	result, err := svc.Close(CloseRequest{})
 	var operationHookErr *HookError
@@ -318,7 +334,9 @@ func TestCloseReturnsOnCloseFailure(t *testing.T) {
 }
 
 func TestCloseReportsSuccess(t *testing.T) {
-	svc := Service{RunHook: func(string, lifecycle.Vars) error { return nil }}
+	svc := Service{
+		Hooks: []Hooks{testShellHooks{run: func(string, lifecycle.Vars) error { return nil }}},
+	}
 
 	result, err := svc.Close(CloseRequest{})
 	if err != nil || !result.Closed {
@@ -347,7 +365,11 @@ func TestDeletePassesAuthorizedWorkspaceIdentity(t *testing.T) {
 	var order []string
 	ws := models.Workspace{Name: "feature", Path: "/workspaces/feature", Branch: "feat/feature", CreatedAt: "created-1"}
 	deps := &fakeWorkspace{workspace: ws, order: &order}
-	svc := Service{Workspace: deps, Store: deps, RunHook: func(string, lifecycle.Vars) error { return nil }}
+	svc := Service{
+		Workspace: deps,
+		Store:     deps,
+		Hooks:     []Hooks{testShellHooks{run: func(string, lifecycle.Vars) error { return nil }}},
+	}
 
 	if _, err := svc.Delete(DeleteRequest{Name: ws.Name}); err != nil {
 		t.Fatal(err)

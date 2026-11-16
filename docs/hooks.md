@@ -116,6 +116,30 @@ gw -n delete my-feature
 
 Per-repo hooks (`.grove.toml`) are unaffected.
 
+### Go implementations
+
+Compiled extensions implement `operations.Hooks` in `internal/operations`.
+Register them in `cmd/gw/main.go` before calling `cmd.Execute()`:
+
+```go
+operations.RegisterHooks(myHooks{}, operations.ShellHooks{})
+```
+
+Implementations run sequentially in registration order at each hook point.
+Register Go implementations before `ShellHooks` so shell commands see their effects.
+`ResolveBranch` receives a `CreateRequest` and passes its returned branch to the next resolver.
+`PostCreate`, `PostAddRepo` and `PreDelete` receive the stored `models.Workspace`,
+including its repositories.
+`OnClose` receives no arguments.
+Return `lifecycle.ErrNoHook` for phases an implementation does not handle.
+
+Go errors stop the chain and fail the command.
+Shell hooks retain their `on_failure` policy;
+a warning allows the next implementation to run.
+Resolver and `OnClose` errors always fail the command.
+Post-hook failures leave completed workspace changes in place.
+`--no-hooks` skips both Go and shell implementations.
+
 ---
 
 ## Per-repo hooks
