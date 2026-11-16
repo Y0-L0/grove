@@ -88,6 +88,36 @@ func TestStateDirRoundTrip(t *testing.T) {
 	}
 }
 
+func TestWorkspaceTypesRoundTrip(t *testing.T) {
+	setupTestEnv(t)
+	contents := `owner_prefix = "alice"
+[types.work]
+context = "/contexts/work"
+[types.priv]
+context = "/contexts/private"
+`
+	if err := os.WriteFile(ConfigPath, []byte(contents), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.OwnerPrefix != "alice" || cfg.Types["work"].Context != "/contexts/work" || cfg.Types["priv"].Context != "/contexts/private" {
+		t.Fatalf("loaded workspace configuration = %+v", cfg)
+	}
+	if err := Save(cfg); err != nil {
+		t.Fatal(err)
+	}
+	reloaded, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reloaded.OwnerPrefix != "alice" || reloaded.Types["work"].Context != "/contexts/work" || reloaded.Types["priv"].Context != "/contexts/private" {
+		t.Fatalf("saved workspace configuration = %+v", reloaded)
+	}
+}
+
 func TestDefaultStateDir(t *testing.T) {
 	setupTestEnv(t)
 	if err := Save(&models.Config{}); err != nil {

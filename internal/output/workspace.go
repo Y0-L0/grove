@@ -9,6 +9,7 @@ import "github.com/nicksenap/grove/internal/models"
 // the state file may change freely, this shape may only gain fields.
 type Workspace struct {
 	Name      string           `json:"name"`
+	Type      string           `json:"type,omitempty"`
 	Path      string           `json:"path"`
 	Branch    string           `json:"branch"`
 	CreatedAt string           `json:"created_at"`
@@ -47,6 +48,7 @@ func FromWorkspace(ws models.Workspace) Workspace {
 	}
 	return Workspace{
 		Name:      ws.Name,
+		Type:      ws.Type,
 		Path:      ws.Path,
 		Branch:    ws.Branch,
 		CreatedAt: ws.CreatedAt,

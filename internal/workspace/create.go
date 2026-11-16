@@ -29,6 +29,7 @@ const (
 // CreateOpts carries the inputs for creating a workspace. It groups the original
 // positional Create parameters and adds optional branch-mode and provenance.
 type CreateOpts struct {
+	Type    string
 	Branch  string
 	Repos   []string
 	RepoMap map[string]string // repo name → source path
@@ -99,15 +100,16 @@ func (s *Service) createWithOptsLocked(name string, opts CreateOpts) (models.Wor
 
 	logging.Info("creating workspace %q (branch=%s, repos=%v)", name, branch, repoNames)
 
-	if err := os.MkdirAll(cfg.WorkspaceDir, 0o755); err != nil {
+	wsPath := filepath.Join(cfg.WorkspaceDir, opts.Type, name)
+	if err := os.MkdirAll(filepath.Dir(wsPath), 0o755); err != nil {
 		return models.Workspace{}, fmt.Errorf("creating workspace parent: %w", err)
 	}
-	wsPath := filepath.Join(cfg.WorkspaceDir, name)
 	if err := os.Mkdir(wsPath, 0o755); err != nil {
 		return models.Workspace{}, fmt.Errorf("creating workspace dir: %w", err)
 	}
 
 	ws := models.NewWorkspace(name, wsPath, branch)
+	ws.Type = opts.Type
 	ws.Source = opts.Source
 
 	// Validate all repo names before provisioning.

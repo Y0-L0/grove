@@ -8,7 +8,7 @@ Global flags: `--verbose` (debug log to `~/.grove/grove.log`), `-n`/`--no-hooks`
 
 | Command | Non-interactive form | Interactive if omitted | Destroys work? |
 |---|---|---|---|
-| `gw create` | `gw create [NAME] -b BRANCH (-r a,b \| -p PRESET \| --all)` | `-r/-p/--all` → picker; `-b` → error | No |
+| `gw create` | `gw create NAME [--type work\|priv] [-b BRANCH] (-r a,b \| -p PRESET \| --all)` | `-r/-p/--all` → picker; without NAME, supply `-b` or answer the branch prompt | No |
 | `gw create --replace` | `gw create NEW -b B -r a --replace -f` (run inside the workspace to replace) | prompt without `-f` | **Yes**: deletes the current workspace first, even if the create then fails |
 | `gw ws show` | `gw ws show [NAME] -o json\|path` | — (outside a workspace without NAME → error) | No |
 | `gw list` / `gw ws list` | `gw list -o jsonl [-s]` (`-s` adds git status) | — | No |
@@ -24,6 +24,16 @@ Global flags: `--verbose` (debug log to `~/.grove/grove.log`), `-n`/`--no-hooks`
 | `gw prune branches` | `gw prune branches [--fetch] [--gone] --json`; `--yes` deletes | — | `--yes` deletes merged branches in source clones; `--gone` force-deletes, may drop unmerged commits |
 
 `NAME` in brackets is detected from the current directory when you are inside a workspace.
+
+New workspaces default to type `work` and live at `<workspace_dir>/<type>/<name>/`.
+Names are unique across types.
+Without `-b`, creation requires `owner_prefix` in `~/.grove/config.toml`
+and derives the branch as `<owner_prefix>/<name>`.
+With `--no-hooks`, the default branch is the workspace name alone,
+and `owner_prefix` is not required.
+`--track` requires an explicit `-b`.
+The `[types.work]` and `[types.priv]` tables each support a `context` repository path.
+Creating context worktrees is deferred to the next slice.
 
 ## Setup and config
 
@@ -53,7 +63,7 @@ Human messages (`ok:`, `warn:`, `error:`, progress) go to stderr. `gw create` wr
 Workspace (`ws show`, `list`):
 
 ```json
-{"name": "fix-auth", "path": "...", "branch": "fix/auth-expiry", "created_at": "...",
+{"name": "fix-auth", "type": "work", "path": "...", "branch": "fix/auth-expiry", "created_at": "...",
  "repos": [{"repo_name": "api", "source_repo": "...", "worktree_path": "...", "branch": "fix/auth-expiry"}]}
 ```
 

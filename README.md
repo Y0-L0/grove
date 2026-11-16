@@ -149,12 +149,29 @@ base_branch = "stage"   # branch from origin/stage instead of origin/main
 setup = "pnpm install"  # run after the worktree is created
 ```
 
-To namespace your branches, add a `resolve_branch` hook to `~/.grove/config.toml`. `gw create -b feat-login` then creates workspace `feat-login` on branch `nick/feat-login`. See [docs/hooks.md](docs/hooks.md#resolving-the-branch-name).
+This fork creates workspaces at `<workspace_dir>/<type>/<name>/`.
+The type defaults to `work`; use `--type priv` for a private workspace.
+Names are unique across types, and existing workspaces keep their paths.
+Set `owner_prefix` in `~/.grove/config.toml` to derive the branch from the name:
 
 ```toml
-[hooks]
-resolve_branch = "echo nick/{branch}"
+owner_prefix = "alice"
+
+[types.work]
+context = "/home/alice/contexts/work"
+
+[types.priv]
+context = "/home/alice/contexts/private"
 ```
+
+`gw create login -r api` creates a `work` workspace on branch `alice/login`.
+An explicit `--branch` overrides the owner-prefix default.
+Without `owner_prefix`, supply `--branch`; `--track` always requires it.
+`--no-hooks` also skips owner-prefix derivation.
+Without `--branch`, it uses the workspace name as the branch name.
+Context repository paths are stored for the next slice, which will create their worktrees.
+Shell resolvers still run after Go resolvers and can change the resulting branch.
+See [docs/hooks.md](docs/hooks.md#resolving-the-branch-name).
 
 To store `state.json` and `state.lock` separately from the configuration,
 set `state_dir` at the top level of `~/.grove/config.toml`.

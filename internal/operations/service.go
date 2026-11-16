@@ -220,9 +220,9 @@ func (s *Service) warn(err error) {
 
 func expectedWorkspace(req CreateRequest) models.Workspace {
 	opts := req.Options
-	ws := models.Workspace{Name: req.Name, Branch: opts.Branch, Source: opts.Source}
+	ws := models.Workspace{Name: req.Name, Type: opts.Type, Branch: opts.Branch, Source: opts.Source}
 	if opts.Cfg != nil {
-		ws.Path = filepath.Join(opts.Cfg.WorkspaceDir, req.Name)
+		ws.Path = filepath.Join(opts.Cfg.WorkspaceDir, opts.Type, req.Name)
 	}
 	return ws
 }

@@ -18,7 +18,7 @@ stream = true
 		e.requireContains(out.combined(), "user="+e.user.name+" logname="+e.user.name, "user environment")
 		e.requireContains(out.combined(), "author="+e.user.name+",email="+e.user.name+"@"+e.user.host, "Git identity")
 		ws := e.showWorkspace("profile-ws")
-		if want := filepath.Join(e.home, e.user.workspaceDir, "profile-ws"); ws.Path != want {
+		if want := filepath.Join(e.home, e.user.workspaceDir, "work", "profile-ws"); ws.Path != want {
 			t.Errorf("workspace path = %q, want %q", ws.Path, want)
 		}
 		if want := e.user.ownerPrefix + "/feature"; ws.Branch != want {

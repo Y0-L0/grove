@@ -81,10 +81,14 @@ func (s *Service) runHooks(call func(Hooks) error) error {
 }
 
 // callResolver returns the branch produced by the resolve_branch hook, or the
-// typed branch unchanged when no resolver is configured (or hooks are off).
+// typed branch unchanged when no resolver is configured. With hooks disabled,
+// an omitted branch defaults to the workspace name.
 // {path} is empty: the workspace does not exist yet.
 func (s *Service) callResolver(req CreateRequest) (string, error) {
 	if lifecycle.Disabled {
+		if req.Options.Branch == "" {
+			return req.Name, nil
+		}
 		return req.Options.Branch, nil
 	}
 	for _, hooks := range s.hooks() {

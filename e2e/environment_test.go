@@ -58,6 +58,7 @@ type cmdResult struct {
 
 type workspaceJSON struct {
 	Name      string           `json:"name"`
+	Type      string           `json:"type,omitempty"`
 	Path      string           `json:"path"`
 	Branch    string           `json:"branch"`
 	CreatedAt string           `json:"created_at"`
@@ -140,7 +141,12 @@ func newEnv(t *testing.T, user userProfile) *env {
 }
 
 func (e *env) waitForBackgroundUnlink() {
-	trash := filepath.Join(e.wsDir, ".trash")
+	for _, parent := range []string{e.wsDir, filepath.Join(e.wsDir, "work"), filepath.Join(e.wsDir, "priv")} {
+		e.waitForTrash(filepath.Join(parent, ".trash"))
+	}
+}
+
+func (e *env) waitForTrash(trash string) {
 	deadline := time.Now().Add(5 * time.Second)
 	for {
 		entries, err := os.ReadDir(trash)
@@ -311,7 +317,7 @@ func (e *env) doctorIssues() []doctorIssue {
 }
 
 func (e *env) workspacePath(name string) string {
-	return filepath.Join(e.wsDir, name)
+	return filepath.Join(e.wsDir, "work", name)
 }
 
 func (e *env) branch(name string) string {
@@ -319,7 +325,7 @@ func (e *env) branch(name string) string {
 }
 
 func (e *env) worktree(workspace, repo string) string {
-	return filepath.Join(e.wsDir, workspace, repo)
+	return filepath.Join(e.workspacePath(workspace), repo)
 }
 
 func (e *env) writeConfig(extra string) {

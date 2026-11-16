@@ -5,7 +5,10 @@ description: Create, inspect, sync, and delete multi-repo git worktree workspace
 
 # Grove (`gw`)
 
-Grove creates a **workspace**: a directory holding one git worktree per selected repo, all on the same branch. Workspaces live under `~/.grove/workspaces/<name>/<repo>` by default; source clones are untouched.
+Grove creates a **workspace**: a directory holding one git worktree per selected repo, all on the same branch.
+This fork creates workspaces under `<workspace_dir>/<type>/<name>/<repo>`,
+with type `work` by default or `priv` through `--type priv`.
+Existing workspaces keep their recorded paths.
 
 ## Rules (apply to every command)
 
@@ -36,12 +39,20 @@ Pick repos by name, preset, or `--all`:
 
 ```bash
 gw preset list --json                      # optional: named repo groups
+gw create fix-auth -r api,web              # branch from configured owner_prefix
+gw create home --type priv -r api          # private workspace
 gw create fix-auth -b fix/auth-expiry -r api,web
 gw create -b feat/login -p backend         # name derived from branch: feat-login
 gw create pr-123 -b their-branch -r api --track   # check out an existing remote branch
 ```
 
-Then read back what was created. A `resolve_branch` hook can change the branch name, so do not assume it:
+Without `--branch`, configure `owner_prefix` in `~/.grove/config.toml` first.
+The default branch is `<owner_prefix>/<name>`.
+When the user requests `--no-hooks`, the default branch is the workspace name alone,
+and `owner_prefix` is not required.
+An explicit `--branch` overrides that default; `--track` requires it.
+A `resolve_branch` hook can change the branch name,
+so read back what was created:
 
 ```bash
 gw ws show fix-auth -o json

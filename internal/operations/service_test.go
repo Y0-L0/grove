@@ -350,13 +350,13 @@ func TestCreateStateReloadErrorIsNotAHookError(t *testing.T) {
 	svc := Service{Workspace: deps, Store: deps}
 
 	result, err := svc.Create(CreateRequest{Name: "feature", Options: workspace.CreateOpts{
-		Branch: "feat/feature", Cfg: &models.Config{WorkspaceDir: "/workspaces"},
+		Type: "priv", Branch: "feat/feature", Cfg: &models.Config{WorkspaceDir: "/workspaces"},
 	}})
 	var hookErr *HookError
 	if err == nil || errors.As(err, &hookErr) {
 		t.Fatalf("error = %v, want non-hook state error", err)
 	}
-	if !result.Created || result.Workspace.Path != "/workspaces/feature" {
+	if !result.Created || result.Workspace.Type != "priv" || result.Workspace.Path != "/workspaces/priv/feature" {
 		t.Fatalf("unexpected result: %+v", result)
 	}
 }

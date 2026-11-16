@@ -14,11 +14,13 @@ import (
 	"github.com/nicksenap/grove/internal/picker"
 	"github.com/nicksenap/grove/internal/state"
 	"github.com/nicksenap/grove/internal/stats"
+	"github.com/nicksenap/grove/internal/workflow"
 	"github.com/nicksenap/grove/internal/workspace"
 	"github.com/spf13/cobra"
 )
 
 var (
+	createType          string
 	createBranch        string
 	createRepos         string
 	createPreset        string
@@ -38,6 +40,12 @@ var createCmd = &cobra.Command{
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		cfg := config.RequireConfig()
+		if err := workflow.ValidateType(createType); err != nil {
+			exitError(err.Error())
+		}
+		if createTrack && createBranch == "" {
+			exitError("--track requires --branch")
+		}
 		repos := discover.UniqueByName(discover.DiscoverReposWithCache(cfg.RepoDirs))
 		repoMap := discover.RepoMap(repos)
 
@@ -97,9 +105,9 @@ var createCmd = &cobra.Command{
 			name = args[0]
 		}
 
-		// Branch — prompt if omitted and in a terminal.
+		// A named workspace gets its default branch from the Go resolver.
 		branch := createBranch
-		if branch == "" {
+		if branch == "" && name == "" {
 			if console.IsTerminal(os.Stdin) {
 				branch = console.PromptDefault("Branch name", name)
 			}
@@ -124,6 +132,7 @@ var createCmd = &cobra.Command{
 			}
 		}
 		opts := workspace.CreateOpts{
+			Type:    createType,
 			Branch:  branch,
 			Repos:   repoNames,
 			RepoMap: repoMap,
@@ -182,6 +191,7 @@ var createCmd = &cobra.Command{
 }
 
 func init() {
+	createCmd.Flags().StringVar(&createType, "type", "work", "Workspace type: work or priv")
 	createCmd.Flags().StringVarP(&createBranch, "branch", "b", "", "Branch name")
 	createCmd.Flags().StringVarP(&createRepos, "repos", "r", "", "Comma-separated repo names")
 	createCmd.Flags().StringVarP(&createPreset, "preset", "p", "", "Use named preset")

@@ -58,12 +58,19 @@ resolve_branch = "echo erebe/{branch}"                            # prefix
 # resolve_branch = "~/bin/branch-namer {branch}"                   # anything else
 ```
 
-- **Input:** `{branch}` (as typed), `{name}` (workspace name), and the `{source_*}` placeholders. `{path}` is empty because the workspace does not exist yet. stdin is not attached.
+- **Input:** `{branch}` from the preceding Go resolver,
+  `{name}` and the `{source_*}` placeholders.
+  This fork's Go resolver derives `<owner_prefix>/<name>` when `--branch` is omitted.
+  `{path}` is empty because the workspace does not exist yet.
+  stdin is not attached.
 - **Output:** stdout must be exactly one non-empty line; surrounding whitespace is trimmed. The result must be a valid git branch name (`git check-ref-format --branch`). Printing `{branch}` back unchanged is fine.
 - **stderr** is never part of the result. It is shown if the hook fails, or live when `stream = true`.
 - **Failure always aborts** `gw create`, whatever `on_failure` says: a non-zero exit, a timeout, empty or multi-line output, or an invalid branch name. Nothing is created.
 - **Runs once.** It runs at `gw create` only, never again for that workspace; `gw add-repo` reuses the stored branch. Your hook does not need to be idempotent.
-- **Skipped** with `--track` (which checks out an existing branch by its real name) and with `--no-hooks` (the branch is used as typed).
+- **Skipped** with `--track`, which requires an explicit branch,
+  and with `--no-hooks`.
+  With hooks disabled, the branch is used as typed
+  or defaults to the workspace name without an owner prefix.
 - Plugins that call `gw create -b X` get the resolved branch too. Read the real name from `gw ws show <name> --json`.
 
 ### Hook output and behavior
@@ -115,6 +122,9 @@ gw -n delete my-feature
 ```
 
 Per-repo hooks (`.grove.toml`) are unaffected.
+The fork's owner-prefix resolver is also skipped.
+Without `--branch`, the workspace name becomes the branch name,
+and `owner_prefix` is not required.
 
 ### Go implementations
 

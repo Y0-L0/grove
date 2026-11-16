@@ -19,6 +19,7 @@ type RepoWorktree struct {
 // Workspace represents a named collection of worktrees.
 type Workspace struct {
 	Name      string           `json:"name"`
+	Type      string           `json:"type,omitempty"`
 	Path      string           `json:"path"`
 	Branch    string           `json:"branch"`
 	CreatedAt string           `json:"created_at"`
@@ -86,13 +87,20 @@ type Preset struct {
 
 // Config is the global Grove configuration (~/.grove/config.toml).
 type Config struct {
-	RepoDirs     []string          `toml:"repo_dirs"`
-	WorkspaceDir string            `toml:"workspace_dir"`
-	StateDir     string            `toml:"state_dir,omitempty"`
-	Presets      map[string]Preset `toml:"presets"`
-	Hooks        map[string]Hook   `toml:"hooks"`
+	OwnerPrefix  string                   `toml:"owner_prefix,omitempty"`
+	Types        map[string]WorkspaceType `toml:"types,omitempty"`
+	RepoDirs     []string                 `toml:"repo_dirs"`
+	WorkspaceDir string                   `toml:"workspace_dir"`
+	StateDir     string                   `toml:"state_dir,omitempty"`
+	Presets      map[string]Preset        `toml:"presets"`
+	Hooks        map[string]Hook          `toml:"hooks"`
 	// Legacy field — auto-migrated to RepoDirs
 	ReposDir string `toml:"repos_dir"`
+}
+
+// WorkspaceType selects the context repository for a workspace type.
+type WorkspaceType struct {
+	Context string `toml:"context"`
 }
 
 // Hook is a global lifecycle hook in ~/.grove/config.toml [hooks]. It accepts
