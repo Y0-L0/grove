@@ -9,10 +9,11 @@ import (
 	"github.com/nicksenap/grove/internal/lifecycle"
 	"github.com/nicksenap/grove/internal/models"
 	"github.com/nicksenap/grove/internal/operations"
+	"github.com/nicksenap/grove/internal/workflow"
 )
 
 func main() {
-	operations.RegisterHooks(goHooks{}, operations.ShellHooks{})
+	operations.RegisterHooks(workflow.Hooks{}, goHooks{}, operations.ShellHooks{})
 	cmd.Execute()
 }
 

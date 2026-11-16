@@ -19,6 +19,7 @@ type Workspace struct {
 
 // WorkspaceRepo is one repo worktree inside a Workspace.
 type WorkspaceRepo struct {
+	Context        bool   `json:"context,omitempty"`
 	RepoName       string `json:"repo_name"`
 	SourceRepo     string `json:"source_repo"`
 	WorktreePath   string `json:"worktree_path"`
@@ -39,6 +40,7 @@ func FromWorkspace(ws models.Workspace) Workspace {
 	repos := make([]WorkspaceRepo, len(ws.Repos))
 	for i, r := range ws.Repos {
 		repos[i] = WorkspaceRepo{
+			Context:        r.Context,
 			RepoName:       r.RepoName,
 			SourceRepo:     r.SourceRepo,
 			WorktreePath:   r.WorktreePath,

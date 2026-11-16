@@ -114,7 +114,21 @@ func (s *Service) Create(req CreateRequest) (CreateResult, error) {
 		return result, fmt.Errorf("created workspace %s not found in state", req.Name)
 	}
 	result.Workspace = *ws
-	if err := s.runHooks(func(h Hooks) error { return h.PostCreate(*ws) }); err != nil {
+	if err := s.runHooks(func(h Hooks) error {
+		if err := h.PostCreate(*ws); err != nil {
+			return err
+		}
+		current, err := s.Store.GetWorkspace(req.Name)
+		if err != nil {
+			return fmt.Errorf("reloading created workspace: %w", err)
+		}
+		if current == nil {
+			return fmt.Errorf("created workspace %s not found in state", req.Name)
+		}
+		ws = current
+		result.Workspace = *current
+		return nil
+	}); err != nil {
 		return result, &HookError{Hook: "post_create", Err: err}
 	}
 	return result, nil

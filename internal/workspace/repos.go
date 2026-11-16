@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/nicksenap/grove/internal/console"
+	"github.com/nicksenap/grove/internal/contextrepo"
 	"github.com/nicksenap/grove/internal/logging"
 	"github.com/nicksenap/grove/internal/models"
 )
@@ -106,6 +107,9 @@ func (s *Service) RemoveReposWithOptions(wsName string, repoNames []string, opts
 	}
 
 	selected := selectRepos(ws, repoNames)
+	if err := contextrepo.CheckRemove(selected); err != nil {
+		return err
+	}
 	if err := preflightRemovals(selected, opts.Force); err != nil {
 		return err
 	}
@@ -143,6 +147,9 @@ func (s *Service) removeReposLocked(wsName string, repoNames []string, opts Remo
 	}
 
 	items := selectRepos(ws, repoNames)
+	if err := contextrepo.CheckRemove(items); err != nil {
+		return 0, err
+	}
 	if err := preflightRemovals(items, opts.Force); err != nil {
 		return 0, err
 	}

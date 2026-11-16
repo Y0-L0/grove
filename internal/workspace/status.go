@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/nicksenap/grove/internal/contextrepo"
 	"github.com/nicksenap/grove/internal/gitops"
 	"github.com/nicksenap/grove/internal/models"
 	"github.com/nicksenap/grove/internal/output"
@@ -50,7 +51,7 @@ func collectRepoStatus(r models.RepoWorktree) repoStatusResult {
 		rs.Changed = strings.Count(status, "\n") + 1
 	}
 
-	upstream, _ := gitops.ResolveBaseBranch(r.SourceRepo)
+	upstream, _ := contextrepo.BaseBranch(r)
 	if upstream == "" {
 		upstream = "origin/main"
 	}
@@ -115,7 +116,7 @@ func (s *Service) fetchStatusResults(repos []models.RepoWorktree, withPR bool) [
 		go func(idx int, repo models.RepoWorktree) {
 			defer wg.Done()
 			results[idx] = collectRepoStatus(repo)
-			if withPR {
+			if withPR && !repo.Context {
 				results[idx].PR = gitops.PRStatus(repo.WorktreePath)
 			}
 		}(i, r)

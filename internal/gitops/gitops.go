@@ -306,6 +306,15 @@ func RepoStatus(path string) (string, error) {
 	return runGit(path, "status", "--short")
 }
 
+// CommitPathsUnsigned commits only the named paths, regardless of signing config.
+func CommitPathsUnsigned(path, message string, paths ...string) error {
+	if _, err := runGit(path, append([]string{"add", "--"}, paths...)...); err != nil {
+		return err
+	}
+	_, err := runGit(path, append([]string{"commit", "--no-gpg-sign", "--only", "-m", message, "--"}, paths...)...)
+	return err
+}
+
 // CurrentBranch returns the current branch name.
 func CurrentBranch(path string) (string, error) {
 	return runGit(path, "branch", "--show-current")
@@ -537,6 +546,33 @@ func ResolveBaseBranch(repo string) (string, error) {
 		return "", err
 	}
 	return "origin/" + branch, nil
+}
+
+// ResolveLocalBaseBranch resolves a local base without depending on origin.
+func ResolveLocalBaseBranch(repo string) (string, error) {
+	cfg, err := ReadGroveConfig(repo)
+	if err != nil {
+		return "", err
+	}
+	branch := ""
+	if cfg != nil {
+		branch = cfg.BaseBranch
+	}
+	if branch == "" {
+		branch, _ = DefaultBranch(repo)
+	}
+	if branch == "" {
+		for _, candidate := range []string{"main", "master"} {
+			if BranchExists(repo, candidate) {
+				branch = candidate
+				break
+			}
+		}
+	}
+	if branch == "" || !BranchExists(repo, branch) {
+		return "", fmt.Errorf("cannot determine local base branch in %s; set base_branch in .grove.toml to an existing local branch", repo)
+	}
+	return "refs/heads/" + branch, nil
 }
 
 // PRInfo holds merge/pull request status.

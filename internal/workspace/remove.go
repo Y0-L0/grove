@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/nicksenap/grove/internal/console"
+	"github.com/nicksenap/grove/internal/contextrepo"
 	"github.com/nicksenap/grove/internal/gitops"
 	"github.com/nicksenap/grove/internal/logging"
 	"github.com/nicksenap/grove/internal/models"
@@ -34,6 +35,9 @@ func (s *Service) DeleteWithOptions(name string, opts RemoveOptions) error {
 	}
 	if ws == nil {
 		return fmt.Errorf("workspace %s not found", name)
+	}
+	if err := contextrepo.CheckDelete(ws.Repos); err != nil {
+		return err
 	}
 	if err := verifyExpectedWorkspace(ws, opts); err != nil {
 		return err
@@ -86,6 +90,9 @@ func (s *Service) deleteLocked(name string, opts RemoveOptions) (*models.Workspa
 	}
 	if ws == nil {
 		return nil, "", fmt.Errorf("workspace %s not found", name)
+	}
+	if err := contextrepo.CheckDelete(ws.Repos); err != nil {
+		return nil, "", err
 	}
 	if err := verifyExpectedWorkspace(ws, opts); err != nil {
 		return nil, "", err

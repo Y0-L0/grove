@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/nicksenap/grove/internal/contextrepo"
 	"github.com/nicksenap/grove/internal/gitops"
 	"github.com/nicksenap/grove/internal/models"
 )
@@ -274,6 +275,10 @@ func (s *Service) checkWorkspaceRepos(ws *models.Workspace, fix bool) (int, []mo
 		if iss, shouldRemove := s.checkRepo(ws.Name, r); iss != nil {
 			issues = append(issues, *iss)
 			if fix && shouldRemove {
+				if err := contextrepo.CheckRemove([]models.RepoWorktree{r}); err != nil {
+					issues[len(issues)-1].SuggestedAction = "repair context repository paths; retain its state entry"
+					continue
+				}
 				toRemove = append(toRemove, r.RepoName)
 				fixed++
 			}

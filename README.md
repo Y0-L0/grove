@@ -169,9 +169,32 @@ An explicit `--branch` overrides the owner-prefix default.
 Without `owner_prefix`, supply `--branch`; `--track` always requires it.
 `--no-hooks` also skips owner-prefix derivation.
 Without `--branch`, it uses the workspace name as the branch name.
-Context repository paths are stored for the next slice, which will create their worktrees.
 Shell resolvers still run after Go resolvers and can change the resulting branch.
 See [docs/hooks.md](docs/hooks.md#resolving-the-branch-name).
+
+When the type has a configured context repository,
+create adds its worktree on the workspace branch, named after its source clone.
+The context path supports `~/` and may sit outside `repo_dirs`.
+The workspace's relative `records` symlink points to `<clone>/records/<name>/`.
+Create commits `TASK.md` and `workspace.toml` there, unsigned.
+The goal belongs in `TASK.md`;
+active repositories and the context flag stay in Grove's state.
+`--no-hooks` skips context worktree creation and records as well.
+
+Context repositories may have no remote.
+Their status and sync use the local base branch,
+with `base_branch` in the source clone's `.grove.toml` overriding the default.
+For a local repository without `main` or `master`, configure that base explicitly.
+`remove-repo` refuses the context worktree, including with `--force`.
+
+Delete refuses workspaces with a context worktree until slice 7 implements records merging,
+including with hooks disabled.
+Records-aware rename, the index command and reopen wait for slice 9;
+agent rules generation waits for slice 8.
+Do not rename context-bearing workspaces until records-aware rename is implemented.
+`doctor --fix` retains missing context entries for path repair.
+A failed `post_create` leaves the created workspace in state;
+an attached context worktree remains tracked when records initialization or its commit fails.
 
 To store `state.json` and `state.lock` separately from the configuration,
 set `state_dir` at the top level of `~/.grove/config.toml`.

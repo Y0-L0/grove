@@ -244,7 +244,10 @@ func ensureWorkspaceBranch(sourcePath, repoName, branch string) (bool, error) {
 
 	base, err := gitops.ResolveBaseBranch(sourcePath)
 	if err != nil {
-		base = "HEAD"
+		base, err = gitops.ResolveLocalBaseBranch(sourcePath)
+		if err != nil {
+			base = "HEAD"
+		}
 	}
 	logging.Info("creating branch %q in %s from %s", branch, repoName, base)
 	if err := gitops.CreateBranch(sourcePath, branch, base); err != nil {

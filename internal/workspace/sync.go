@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/nicksenap/grove/internal/console"
+	"github.com/nicksenap/grove/internal/contextrepo"
 	"github.com/nicksenap/grove/internal/gitops"
 	"github.com/nicksenap/grove/internal/logging"
 	"github.com/nicksenap/grove/internal/models"
@@ -12,8 +13,10 @@ import (
 
 // syncOneRepo syncs a single repo.
 func (s *Service) syncOneRepo(r models.RepoWorktree) {
-	if err := gitops.Fetch(r.SourceRepo); err != nil {
-		console.Warningf("%s: fetch failed, using local state: %s", r.RepoName, err)
+	if !r.Context {
+		if err := gitops.Fetch(r.SourceRepo); err != nil {
+			console.Warningf("%s: fetch failed, using local state: %s", r.RepoName, err)
+		}
 	}
 
 	groveCfg, _ := gitops.ReadGroveConfig(r.SourceRepo)
@@ -28,7 +31,7 @@ func (s *Service) syncOneRepo(r models.RepoWorktree) {
 		return
 	}
 
-	upstream, err := gitops.ResolveBaseBranch(r.SourceRepo)
+	upstream, err := contextrepo.BaseBranch(r)
 	if err != nil {
 		console.Warningf("%s: could not determine base branch: %s", r.RepoName, err)
 		return
