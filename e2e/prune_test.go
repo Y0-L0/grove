@@ -40,7 +40,7 @@ func TestPruneListsOldWorkspacesWithoutDeleting(t *testing.T) {
 
 func TestPruneYesDeletesOldWorkspaces(t *testing.T) {
 	forEachUser(t, func(t *testing.T, env *env) {
-		env.createRepo("svc-auth")
+		env.createRepoWithHistory("svc-auth", 1)
 		env.init()
 		env.mustGW("create", "old-ws", "--branch", env.branch("feat/old"), "--repos", "svc-auth")
 		env.mustGW("create", "fresh-ws", "--branch", env.branch("feat/fresh"), "--repos", "svc-auth")
@@ -108,7 +108,7 @@ func TestPruneMinAgeAcceptsUnits(t *testing.T) {
 
 func TestPruneCleansStaleRecordWhoseDirectoryIsGone(t *testing.T) {
 	forEachUser(t, func(t *testing.T, env *env) {
-		repo := env.createRepo("svc-auth")
+		repo := env.createRepoWithHistory("svc-auth", 1)
 		env.init()
 		env.mustGW("create", "gone-ws", "--branch", env.branch("feat/gone"), "--repos", "svc-auth")
 		env.mustGW("create", "fresh-ws", "--branch", env.branch("feat/fresh"), "--repos", "svc-auth")

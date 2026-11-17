@@ -1,6 +1,6 @@
 # `gw` command reference
 
-Global flags: `--verbose` (debug log to `~/.grove/grove.log`), `-n`/`--no-hooks` (skip lifecycle hooks; avoid unless asked), `-v`/`--version`.
+Global flags: `--verbose` (debug log to `~/.grove/grove.log`), `-n`/`--no-hooks` (skip optional lifecycle hooks; delete checks and records merging still run), `-v`/`--version`.
 
 **Interactive?** column: what happens if you omit the listed args. "picker" means exit 1 without a TTY; "prompt" means it prints a question and, with no stdin, silently declines and exits 0.
 
@@ -19,7 +19,7 @@ Global flags: `--verbose` (debug log to `~/.grove/grove.log`), `-n`/`--no-hooks`
 | `gw rename` | `gw rename OLD --to NEW` | `OLD` → picker | No |
 | `gw sync` | `gw sync [NAME]` | — | Rebases local branches onto base (history rewrite); skips dirty repos |
 | `gw reset` | `gw reset [NAME] [--discard]` | — | `--discard` drops tracked local changes |
-| `gw delete` / `gw ws delete` | `gw delete NAME...`; or `... \| gw delete --stdin --yes` | no names → picker | **Yes, no prompt**: force-removes worktrees and `git branch -D` (branches that existed before the workspace are kept) |
+| `gw delete` / `gw ws delete` | `gw delete NAME... [--force]`; or `... \| gw delete --stdin --yes` | no names → picker | Checks all worktrees and merges committed context records before removal. `--force` skips checks and discards uncommitted work and unpushed code. Pre-existing branches are kept. |
 | `gw prune` | `gw prune [--min-age 7d] --json` to list; add `--yes` to delete | — | `--yes`: deletes every listed workspace like `gw delete` |
 | `gw prune branches` | `gw prune branches [--fetch] [--gone] --json`; `--yes` deletes | — | `--yes` deletes merged branches in source clones; `--gone` force-deletes, may drop unmerged commits |
 

@@ -16,11 +16,11 @@ func BaseBranch(repo models.RepoWorktree) (string, error) {
 	return gitops.ResolveBaseBranch(repo.SourceRepo)
 }
 
-// CheckDelete protects records until records merging at delete is implemented.
-func CheckDelete(repos []models.RepoWorktree) error {
+// CheckDelete requires the operation policy to preserve records before removal.
+func CheckDelete(repos []models.RepoWorktree, merged bool) error {
 	for _, repo := range repos {
-		if repo.Context {
-			return fmt.Errorf("cannot delete workspace with context repository %s: records merging at delete requires rewrite slice 7", repo.RepoName)
+		if repo.Context && !merged {
+			return fmt.Errorf("cannot delete context repository %s before records merging", repo.RepoName)
 		}
 	}
 	return nil

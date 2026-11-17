@@ -16,6 +16,7 @@ import (
 var (
 	deleteStdin bool
 	deleteYes   bool
+	deleteForce bool
 )
 
 // deleteCmd is the top-level "gw delete" command.
@@ -68,7 +69,7 @@ func doDelete(cmd *cobra.Command, args []string) {
 
 	for _, name := range names {
 		if _, err := operations.NewService().Delete(operations.DeleteRequest{
-			Name: name, Options: workspace.RemoveOptions{Force: true},
+			Name: name, Options: workspace.RemoveOptions{Force: deleteForce},
 		}); err != nil {
 			exitError(err.Error())
 		}
@@ -127,6 +128,7 @@ func uniqueDeleteNames(names []string) []string {
 
 func init() {
 	for _, command := range []*cobra.Command{deleteCmd, wsDeleteCmd} {
+		command.Flags().BoolVar(&deleteForce, "force", false, "Skip delete checks; still merge committed context records")
 		command.Flags().BoolVar(&deleteStdin, "stdin", false, "Read newline-delimited workspace names from stdin")
 		command.Flags().BoolVarP(&deleteYes, "yes", "y", false, "Confirm deletion of workspace names read from stdin")
 	}

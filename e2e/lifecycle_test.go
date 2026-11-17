@@ -48,7 +48,7 @@ pre_delete = "touch ` + pre + `"
 
 		env.mustGW("create", "hook-ws", "--branch", env.branch("feat/hook-test"), "--repos", "svc-auth")
 		env.requireExists(post)
-		env.mustGW("delete", "hook-ws")
+		env.mustGW("delete", "hook-ws", "--force")
 		env.requireExists(pre)
 	})
 }
@@ -66,7 +66,7 @@ pre_delete = "touch ` + pre + `"
 
 		env.mustGW("--no-hooks", "create", "nohook-ws", "--branch", env.branch("feat/no-hooks"), "--repos", "svc-auth")
 		env.requireMissing(post)
-		env.mustGW("-n", "delete", "nohook-ws")
+		env.mustGW("-n", "delete", "nohook-ws", "--force")
 		env.requireMissing(pre)
 	})
 }
@@ -82,20 +82,20 @@ stream = true
 `)
 		streamOut := env.mustGW("create", "stream-ws", "--branch", env.branch("feat/stream"), "--repos", "svc-auth")
 		env.requireContains(streamOut.combined(), "[post_create] hello-from-stream", "stream hook")
-		env.mustGW("delete", "stream-ws")
+		env.mustGW("delete", "stream-ws", "--force")
 
 		env.writeConfig(`[hooks.post_create]
 command = "echo boom-details; exit 1"
 on_failure = "abort"
 `)
 		env.gw("create", "abort-ws", "--branch", env.branch("feat/abort"), "--repos", "svc-auth").mustFail(t)
-		env.mustGW("delete", "abort-ws")
+		env.mustGW("delete", "abort-ws", "--force")
 
 		env.writeConfig(`[hooks.post_create]
 command = "echo boom-details; exit 1"
 `)
 		env.mustGW("create", "warn-ws", "--branch", env.branch("feat/warn"), "--repos", "svc-auth")
-		env.mustGW("delete", "warn-ws")
+		env.mustGW("delete", "warn-ws", "--force")
 	})
 }
 

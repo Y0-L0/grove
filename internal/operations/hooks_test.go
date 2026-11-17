@@ -113,6 +113,37 @@ func TestWarningAllowsLaterGoHookAndDelete(t *testing.T) {
 	assertOrder(t, order, "Go hook", "delete")
 }
 
+func TestDeletePolicyRunsWithHooksDisabled(t *testing.T) {
+	previous := lifecycle.Disabled
+	lifecycle.Disabled = true
+	t.Cleanup(func() { lifecycle.Disabled = previous })
+	for _, force := range []bool{false, true} {
+		var order []string
+		deps := &fakeWorkspace{workspace: models.Workspace{Name: "login"}, order: &order}
+		blocked := errors.New("records could not be preserved")
+		policy := testDeletePolicy{prepare: func(ws models.Workspace, opts workspace.RemoveOptions) error {
+			if ws.Name != "login" || opts.Force != force {
+				t.Fatalf("policy received %q, force = %v", ws.Name, opts.Force)
+			}
+			return blocked
+		}}
+		svc := Service{Workspace: deps, Store: deps, Hooks: []Hooks{policy}}
+		result, err := svc.Delete(DeleteRequest{Name: "login", Options: workspace.RemoveOptions{Force: force}})
+		if result.Deleted || !errors.Is(err, blocked) || len(order) != 0 {
+			t.Fatalf("delete bypassed records protection: %+v, %v, %v", result, err, order)
+		}
+	}
+}
+
+type testDeletePolicy struct {
+	testHooks
+	prepare func(models.Workspace, workspace.RemoveOptions) error
+}
+
+func (h testDeletePolicy) PrepareDelete(ws models.Workspace, opts workspace.RemoveOptions) error {
+	return h.prepare(ws, opts)
+}
+
 type testHooks struct {
 	resolve     func(CreateRequest) (string, error)
 	postCreate  func(models.Workspace) error

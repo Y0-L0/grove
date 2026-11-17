@@ -124,8 +124,8 @@ func TestWorkspaceNamesAreUniqueAcrossTypes(t *testing.T) {
 
 func TestPrivateWorkspaceKeepsTypeAndBranch(t *testing.T) {
 	forEachUser(t, func(t *testing.T, env *env) {
-		env.createRepo("svc-auth")
-		env.createRepo("svc-api")
+		env.createRepoWithHistory("svc-auth", 1)
+		env.createRepoWithHistory("svc-api", 1)
 		env.init()
 		env.writeConfig("owner_prefix = " + strconv.Quote(env.user.ownerPrefix) + "\n")
 		env.mustGW("create", "home", "--type", "priv", "--repos", "svc-auth")
@@ -148,8 +148,8 @@ func TestPrivateWorkspaceKeepsTypeAndBranch(t *testing.T) {
 
 func TestExistingUntypedWorkspace(t *testing.T) {
 	forEachUser(t, func(t *testing.T, env *env) {
-		env.createRepo("svc-auth")
-		env.createRepo("svc-api")
+		env.createRepoWithHistory("svc-auth", 1)
+		env.createRepoWithHistory("svc-api", 1)
 		env.init()
 		legacyPath := filepath.Join(env.wsDir, "legacy")
 		source := filepath.Join(env.reposDir, "svc-auth")

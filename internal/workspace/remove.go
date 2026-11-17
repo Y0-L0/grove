@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"time"
 
@@ -20,6 +21,9 @@ type RemoveOptions struct {
 	Force             bool
 	ExpectedCreatedAt string
 	ExpectedPath      string
+	// RecordsMerged authorizes context removal after the operation policy succeeds.
+	RecordsMerged     bool
+	ExpectedWorkspace *models.Workspace
 }
 
 // Delete removes a workspace using safe defaults.
@@ -36,7 +40,7 @@ func (s *Service) DeleteWithOptions(name string, opts RemoveOptions) error {
 	if ws == nil {
 		return fmt.Errorf("workspace %s not found", name)
 	}
-	if err := contextrepo.CheckDelete(ws.Repos); err != nil {
+	if err := contextrepo.CheckDelete(ws.Repos, opts.RecordsMerged); err != nil {
 		return err
 	}
 	if err := verifyExpectedWorkspace(ws, opts); err != nil {
@@ -74,6 +78,11 @@ func (s *Service) DeleteWithOptions(name string, opts RemoveOptions) error {
 }
 
 func verifyExpectedWorkspace(ws *models.Workspace, opts RemoveOptions) error {
+	if expected := opts.ExpectedWorkspace; expected != nil {
+		if ws.Branch != expected.Branch || ws.Type != expected.Type || !slices.Equal(ws.Repos, expected.Repos) {
+			return fmt.Errorf("workspace %s changed after pre-delete checks", ws.Name)
+		}
+	}
 	if opts.ExpectedCreatedAt != "" && ws.CreatedAt != opts.ExpectedCreatedAt {
 		return fmt.Errorf("workspace %s changed after pre-delete checks", ws.Name)
 	}
@@ -91,7 +100,7 @@ func (s *Service) deleteLocked(name string, opts RemoveOptions) (*models.Workspa
 	if ws == nil {
 		return nil, "", fmt.Errorf("workspace %s not found", name)
 	}
-	if err := contextrepo.CheckDelete(ws.Repos); err != nil {
+	if err := contextrepo.CheckDelete(ws.Repos, opts.RecordsMerged); err != nil {
 		return nil, "", err
 	}
 	if err := verifyExpectedWorkspace(ws, opts); err != nil {

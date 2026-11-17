@@ -148,7 +148,10 @@ Shell hooks retain their `on_failure` policy;
 a warning allows the next implementation to run.
 Resolver and `OnClose` errors always fail the command.
 Post-hook failures leave completed workspace changes in place.
-`--no-hooks` skips both Go and shell implementations.
+`--no-hooks` skips both Go and shell implementations of optional hooks.
+The fork's delete policy runs before `pre_delete`, even with hooks disabled.
+It checks the workspace and merges committed context records before removal.
+`gw delete --force` skips those checks while retaining the records merge.
 
 ---
 

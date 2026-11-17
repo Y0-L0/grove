@@ -119,7 +119,7 @@ func TestContextRecordsSymlink(t *testing.T) {
 	})
 }
 
-func TestContextCannotBeDeletedOrRemoved(t *testing.T) {
+func TestContextCannotBeRemoved(t *testing.T) {
 	forEachUser(t, func(t *testing.T, e *env) {
 		e.createRepo("svc-auth")
 		e.init()
@@ -133,8 +133,6 @@ func TestContextCannotBeDeletedOrRemoved(t *testing.T) {
 		before := e.mustGW("ws", "show", "login", "--json").stdout
 		branch := e.git(source, "rev-parse", e.branch("login"))
 		for _, args := range [][]string{
-			{"delete", "login"},
-			{"--no-hooks", "delete", "login"},
 			{"remove-repo", "login", "--repos", "svc-auth," + filepath.Base(source), "--force"},
 		} {
 			res := e.gw(args...).mustFail(t)

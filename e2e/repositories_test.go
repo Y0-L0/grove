@@ -311,7 +311,7 @@ func TestRecursiveRepositoryDiscovery(t *testing.T) {
 		env.requireContains(out.combined(), "1 repos found", "add-dir nested discovery")
 
 		env.mustGW("create", "nested-discovery", "-b", env.branch("feat/nested-discovery"), "-r", "svc-nested")
-		env.mustGW("-n", "delete", "nested-discovery")
+		env.mustGW("-n", "delete", "nested-discovery", "--force")
 
 		help := env.mustGW("--help")
 		if regexp.MustCompile(`(?m)^  explore\s`).MatchString(help.combined()) {

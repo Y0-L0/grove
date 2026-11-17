@@ -192,7 +192,7 @@ func runPrune(now time.Time, stdout io.Writer) error {
 	deleteErr := deleteCandidates(candidates, func(name string) error {
 		_, err := svc.Delete(operations.DeleteRequest{
 			Name:    name,
-			Options: workspace.RemoveOptions{Force: true},
+			Options: workspace.RemoveOptions{},
 		})
 		return err
 	})

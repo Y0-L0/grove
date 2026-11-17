@@ -108,7 +108,7 @@ gw status my-feature   # git status across every repo
 gw sync my-feature     # rebase all repos onto their base branch
 gw reset my-feature    # switch every repo back to the workspace branch, then sync
 
-# Clean up when done (destructive; use a pre_delete hook to enforce policy)
+# Clean up after committing and pushing code changes
 gw delete my-feature   # removes worktrees, branches, and workspace files
 gw prune               # list workspaces older than 7 days, plus stale records whose directory is gone
 gw prune --yes         # delete them (same two-phase cleanup as gw delete)
@@ -199,8 +199,15 @@ with `base_branch` in the source clone's `.grove.toml` overriding the default.
 For a local repository without `main` or `master`, configure that base explicitly.
 `remove-repo` refuses the context worktree, including with `--force`.
 
-Delete refuses workspaces with a context worktree until slice 7 implements records merging,
-including with hooks disabled.
+Delete reports dirty or unregistered worktrees, unexpected branches,
+unpushed code commits and temporary worktrees before changing anything.
+Plain directories such as `vmtest/` go with the workspace.
+The context clone must have its local base branch checked out.
+Delete commits the deletion date and code repository names in `workspace.toml`,
+rebases the context branch onto its base and fast-forwards the clone before removal.
+These commits remain unsigned.
+`--force` skips checks and discards uncommitted work, but still merges committed records.
+`--no-hooks` skips optional lifecycle hooks; delete checks and records merging still run.
 Records-aware rename, the index command and reopen wait for slice 9;
 agent rules generation waits for slice 8.
 Do not rename context-bearing workspaces until records-aware rename is implemented.

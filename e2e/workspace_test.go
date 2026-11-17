@@ -139,7 +139,7 @@ func TestMultipleWorkspaces(t *testing.T) {
 
 func TestDeleteWorkspace(t *testing.T) {
 	forEachUser(t, func(t *testing.T, env *env) {
-		env.createRepo("svc-auth")
+		env.createRepoWithHistory("svc-auth", 1)
 		env.init()
 		env.mustGW("create", "test-ws", "--branch", env.branch("feat/e2e"), "--repos", "svc-auth")
 		env.mustGW("create", "ws-two", "--branch", env.branch("feat/other"), "--repos", "svc-auth")
@@ -157,7 +157,7 @@ func TestDeleteWorkspace(t *testing.T) {
 
 func TestWsDeleteSubcommand(t *testing.T) {
 	forEachUser(t, func(t *testing.T, env *env) {
-		env.createRepo("svc-auth")
+		env.createRepoWithHistory("svc-auth", 1)
 		env.init()
 		env.mustGW("create", "keep-ws", "--branch", env.branch("feat/keep"), "--repos", "svc-auth")
 		env.mustGW("create", "ws-del-sub", "--branch", env.branch("feat/ws-del"), "--repos", "svc-auth")
@@ -172,7 +172,7 @@ func TestWsDeleteSubcommand(t *testing.T) {
 
 func TestCreateReplace(t *testing.T) {
 	forEachUser(t, func(t *testing.T, env *env) {
-		env.createRepo("svc-api")
+		env.createRepoWithHistory("svc-api", 1)
 		env.init()
 		env.mustGW("create", "replace-old", "--branch", env.branch("feat/replace-old"), "--repos", "svc-api")
 		oldDir := env.workspacePath("replace-old")
@@ -204,7 +204,7 @@ func TestStatusAutoDetectFromCwd(t *testing.T) {
 
 func TestFinalCleanup(t *testing.T) {
 	forEachUser(t, func(t *testing.T, env *env) {
-		env.createRepo("svc-auth")
+		env.createRepoWithHistory("svc-auth", 1)
 		env.init()
 		env.mustGW("create", "test-ws", "--branch", env.branch("feat/e2e"), "--repos", "svc-auth")
 		env.mustGW("delete", "test-ws")

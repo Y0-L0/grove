@@ -183,11 +183,24 @@ func (s *Service) Delete(req DeleteRequest) (DeleteResult, error) {
 		return DeleteResult{}, fmt.Errorf("workspace %s not found", req.Name)
 	}
 	result := DeleteResult{Workspace: *ws}
+	for _, h := range s.hooks() {
+		if policy, ok := h.(DeletePolicy); ok {
+			if err := policy.PrepareDelete(*ws, req.Options); err != nil {
+				return result, &HookError{Hook: "pre_delete", Err: err}
+			}
+			req.Options.RecordsMerged = true
+		}
+	}
 	if err := s.runHooks(func(h Hooks) error { return h.PreDelete(*ws) }); err != nil {
 		return result, &HookError{Hook: "pre_delete", Err: err}
 	}
 	req.Options.ExpectedCreatedAt = ws.CreatedAt
 	req.Options.ExpectedPath = ws.Path
+	req.Options.ExpectedWorkspace = ws
+	if req.Options.RecordsMerged {
+		// Policy has checked remote reachability; primitive cleanup may drop branches.
+		req.Options.Force = true
+	}
 	if err := s.Workspace.DeleteWithOptions(req.Name, req.Options); err != nil {
 		return result, err
 	}

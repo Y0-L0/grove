@@ -14,7 +14,7 @@ Existing workspaces keep their recorded paths.
 
 - **Always pass explicit names and flags.** Without a TTY, pickers exit 1 with `interactive selection requires a terminal`. Never rely on a picker or prompt.
 - **stdout is data, stderr is chatter.** Parse only `-o json|jsonl|name|path` or `--json` output. Never parse tables or stderr.
-- **`gw delete` does not ask.** It force-removes worktrees and runs `git branch -D` on the workspace branch. Uncommitted changes and unpushed commits are lost. Follow the cleanup step below.
+- **`gw delete` does not ask.** It checks every worktree, merges context records, then removes the workspace and its branches. Use `--force` only when the user authorizes discarding uncommitted work and unpushed code commits. Committed context records still merge, including with `--no-hooks`.
 - **Confirmation prompts silently decline without input.** `gw remove-repo -r X` (without `-f`) and `gw create --replace` (without `-f`) print a prompt, do nothing, and exit 0. Check the result; do not assume success from the exit code.
 - **Do not pass `-n`/`--no-hooks`** unless the user asks. Hooks may enforce the user's policy (for example a `pre_delete` that blocks deletion).
 - **Do not run `prune --yes`, `prune branches --yes`, `reset --discard`, `doctor --fix`, or `create --replace -f`** without the user's explicit go-ahead. Run the read-only form first and show the result.
@@ -81,7 +81,11 @@ Before deleting, confirm nothing will be lost:
 gw status fix-auth -o jsonl
 ```
 
-Every repo must have `changed` equal to 0 and `ahead` equal to `"0"`. `ahead: "-"` means the branch has no upstream (never pushed), so its commits exist only locally: run `git -C <worktree_path> log --oneline <base>..HEAD` (base is usually `main`) and treat any output as unpushed work. If anything would be lost, stop and tell the user. Then:
+Commit all changes and push code commits before deletion.
+Delete checks commits against every remote-tracking branch without fetching.
+It reports every problem, including temporary worktrees, before changing anything.
+Context records merge locally and need no push.
+Then:
 
 ```bash
 gw delete fix-auth

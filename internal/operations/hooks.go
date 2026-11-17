@@ -7,6 +7,7 @@ import (
 	"github.com/nicksenap/grove/internal/gitops"
 	"github.com/nicksenap/grove/internal/lifecycle"
 	"github.com/nicksenap/grove/internal/models"
+	"github.com/nicksenap/grove/internal/workspace"
 )
 
 // Hooks receives typed context at each workspace lifecycle phase.
@@ -19,6 +20,12 @@ type Hooks interface {
 	PostAddRepo(models.Workspace) error
 	PreDelete(models.Workspace) error
 	OnClose() error
+}
+
+// DeletePolicy runs even with --no-hooks, before optional pre_delete hooks.
+// It must preserve committed context records before authorizing removal.
+type DeletePolicy interface {
+	PrepareDelete(models.Workspace, workspace.RemoveOptions) error
 }
 
 var registeredHooks = []Hooks{ShellHooks{}}

@@ -18,7 +18,7 @@ repos = ["svc-auth", "svc-api"]
 		env.requireExists(env.worktree("preset-ws", "svc-auth"))
 		env.requireExists(env.worktree("preset-ws", "svc-api"))
 		env.requireMissing(env.worktree("preset-ws", "svc-gateway"))
-		env.mustGW("delete", "preset-ws")
+		env.mustGW("delete", "preset-ws", "--force")
 
 		list := env.mustGW("preset", "list", "--json")
 		presets := decodeJSON[map[string]presetJSON](t, list.stdout)

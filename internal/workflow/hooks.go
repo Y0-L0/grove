@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/nicksenap/grove/internal/config"
-	"github.com/nicksenap/grove/internal/contextrepo"
 	"github.com/nicksenap/grove/internal/gitops"
 	"github.com/nicksenap/grove/internal/lifecycle"
 	"github.com/nicksenap/grove/internal/models"
@@ -62,6 +61,6 @@ func configureRemotes(ws models.Workspace) error {
 	return nil
 }
 
-func (Hooks) PreDelete(ws models.Workspace) error { return contextrepo.CheckDelete(ws.Repos) }
+func (Hooks) PreDelete(models.Workspace) error { return nil }
 
 func (Hooks) OnClose() error { return lifecycle.ErrNoHook }
