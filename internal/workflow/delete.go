@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -20,7 +19,7 @@ import (
 // This policy also applies when optional lifecycle hooks are disabled.
 func (Hooks) PrepareDelete(ws models.Workspace, opts workspace.RemoveOptions) error {
 	if !opts.Force {
-		if err := checkDelete(ws); err != nil {
+		if err := workspace.CheckDelete(ws); err != nil {
 			return err
 		}
 	}
@@ -34,131 +33,12 @@ func (Hooks) PrepareDelete(ws models.Workspace, opts workspace.RemoveOptions) er
 	return nil
 }
 
-func checkDelete(ws models.Workspace) error {
-	var problems []error
-	for _, repo := range ws.Repos {
-		for _, err := range checkDeleteRepo(repo) {
-			problems = append(problems, fmt.Errorf("%s: %w", repo.RepoName, err))
-		}
-	}
-	problems = append(problems, checkTemporaryWorktrees(ws)...)
-	return errors.Join(problems...)
-}
-
-func checkDeleteRepo(repo models.RepoWorktree) []error {
-	var problems []error
-	if _, err := os.Stat(repo.WorktreePath); err == nil {
-		problems = append(problems, checkRegistration(repo)...)
-		status, err := gitops.RepoStatus(repo.WorktreePath)
-		if err != nil {
-			problems = append(problems, err)
-		} else if status != "" {
-			problems = append(problems, fmt.Errorf("dirty worktree at %s:\n%s", repo.WorktreePath, status))
-		}
-	} else if !os.IsNotExist(err) {
-		problems = append(problems, err)
-	}
-	if !repo.Context {
-		commits, err := gitops.UnpushedCommits(repo.SourceRepo, repo.Branch)
-		if err != nil {
-			problems = append(problems, err)
-		} else if commits != "" {
-			problems = append(problems, fmt.Errorf("unpushed commits on %s:\n%s", repo.Branch, commits))
-		}
-	} else {
-		if _, err := checkedOutBase(repo); err != nil {
-			problems = append(problems, err)
-		}
-	}
-	return problems
-}
-
-func checkRegistration(repo models.RepoWorktree) []error {
-	entries, err := gitops.WorktreeList(repo.SourceRepo)
-	if err != nil {
-		return []error{err}
-	}
-	for _, entry := range entries {
-		if samePath(entry.Path, repo.WorktreePath) {
-			if entry.Branch != repo.Branch {
-				return []error{fmt.Errorf("unexpected branch %q at %s, expected %q", entry.Branch, repo.WorktreePath, repo.Branch)}
-			}
-			return nil
-		}
-	}
-	return []error{fmt.Errorf("worktree path is not registered: %s", repo.WorktreePath)}
-}
-
-func samePath(a, b string) bool {
-	canonical := func(path string) string {
-		if resolved, err := filepath.EvalSymlinks(path); err == nil {
-			path = resolved
-		}
-		absolute, err := filepath.Abs(path)
-		if err == nil {
-			path = absolute
-		}
-		return filepath.Clean(path)
-	}
-	return canonical(a) == canonical(b)
-}
-
-func checkTemporaryWorktrees(ws models.Workspace) []error {
-	entries, err := os.ReadDir(ws.Path)
-	if os.IsNotExist(err) {
-		return nil
-	}
-	if err != nil {
-		return []error{err}
-	}
-	var problems []error
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-		path := filepath.Join(ws.Path, entry.Name())
-		tracked := false
-		for _, repo := range ws.Repos {
-			if samePath(path, repo.WorktreePath) {
-				tracked = true
-			}
-		}
-		if tracked {
-			continue
-		}
-		info, err := os.Lstat(filepath.Join(path, ".git"))
-		if err == nil && info.Mode().IsRegular() {
-			problems = append(problems, fmt.Errorf("temporary worktree %s; remove it with:\ngit -C %s \\\n  worktree remove \\\n  %s", path, shellQuote(path), shellQuote(path)))
-		} else if err != nil && !os.IsNotExist(err) {
-			problems = append(problems, err)
-		}
-	}
-	return problems
-}
-
-func shellQuote(s string) string { return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'" }
-
-func checkedOutBase(repo models.RepoWorktree) (string, error) {
-	base, err := contextrepo.BaseBranch(repo)
-	if err != nil {
-		return "", err
-	}
-	branch, err := gitops.CurrentBranch(repo.SourceRepo)
-	if err != nil {
-		return "", err
-	}
-	if "refs/heads/"+branch != base {
-		return "", fmt.Errorf("context clone must have base branch %q checked out, found %q", base, branch)
-	}
-	return base, nil
-}
-
 func mergeRecords(ws models.Workspace, repo models.RepoWorktree, force bool) error {
-	base, err := checkedOutBase(repo)
+	base, err := contextrepo.CheckedOutBase(repo)
 	if err != nil {
 		return err
 	}
-	if err := prepareContextCheckout(repo, force); err != nil {
+	if err := prepareContextCheckout(repo, base, force); err != nil {
 		return err
 	}
 	if err := recordDeletion(ws, repo); err != nil {
@@ -170,7 +50,7 @@ func mergeRecords(ws models.Workspace, repo models.RepoWorktree, force bool) err
 	return gitops.FastForward(repo.SourceRepo, repo.Branch)
 }
 
-func prepareContextCheckout(repo models.RepoWorktree, force bool) error {
+func prepareContextCheckout(repo models.RepoWorktree, base string, force bool) error {
 	if _, err := os.Stat(repo.WorktreePath); os.IsNotExist(err) {
 		// Missing checkouts still have committed records on their stored branch.
 		if err := gitops.WorktreePrune(repo.SourceRepo); err != nil {
@@ -183,6 +63,12 @@ func prepareContextCheckout(repo models.RepoWorktree, force bool) error {
 		return err
 	}
 	if force {
+		// A retry must retain commits made on an unexpected branch or detached HEAD.
+		if err := gitops.CheckAncestor(repo.WorktreePath, "HEAD", "refs/heads/"+repo.Branch); err != nil {
+			if baseErr := gitops.CheckAncestor(repo.WorktreePath, "HEAD", base); baseErr != nil {
+				return fmt.Errorf("context checkout has committed records outside %s and %s; merge its HEAD into the workspace branch before retrying: %w", repo.Branch, base, errors.Join(err, baseErr))
+			}
+		}
 		if err := gitops.DiscardWorktreeChanges(repo.WorktreePath); err != nil {
 			return err
 		}

@@ -47,7 +47,7 @@ func (s *Service) DeleteWithOptions(name string, opts RemoveOptions) error {
 		return err
 	}
 
-	if err := preflightRemovals(ws.Repos, opts.Force); err != nil {
+	if err := checkRemoval(*ws, opts); err != nil {
 		return err
 	}
 
@@ -106,7 +106,7 @@ func (s *Service) deleteLocked(name string, opts RemoveOptions) (*models.Workspa
 	if err := verifyExpectedWorkspace(ws, opts); err != nil {
 		return nil, "", err
 	}
-	if err := preflightRemovals(ws.Repos, opts.Force); err != nil {
+	if err := checkRemoval(*ws, opts); err != nil {
 		return nil, "", err
 	}
 
@@ -151,7 +151,7 @@ func (s *Service) deleteLocked(name string, opts RemoveOptions) (*models.Workspa
 	}
 
 	for _, repo := range original.Repos {
-		s.deleteBranch(repo, opts.Force)
+		s.deleteBranch(repo, opts.Force || opts.RecordsMerged)
 	}
 	return &original, trashPath, nil
 }
@@ -288,41 +288,38 @@ func preflightRemovals(repos []models.RepoWorktree, force bool) error {
 }
 
 func preflightRemoval(repo models.RepoWorktree) error {
+	return errors.Join(checkRegistration(repo), checkCheckout(repo))
+}
+
+func checkRegistration(repo models.RepoWorktree) error {
 	entries, err := gitops.WorktreeList(repo.SourceRepo)
 	if err != nil {
 		return fmt.Errorf("reading worktree registration: %w", err)
 	}
-
-	expectedPath := canonicalPath(repo.WorktreePath)
-	registered := false
 	for _, entry := range entries {
-		if canonicalPath(entry.Path) != expectedPath {
-			continue
+		if canonicalPath(entry.Path) == canonicalPath(repo.WorktreePath) {
+			if entry.Branch != repo.Branch {
+				return fmt.Errorf("unexpected branch %q at %s (expected %q)", entry.Branch, repo.WorktreePath, repo.Branch)
+			}
+			return nil
 		}
-		registered = true
-		if entry.Branch != repo.Branch {
-			return fmt.Errorf("unexpected branch %q at %s (expected %q)", entry.Branch, repo.WorktreePath, repo.Branch)
-		}
-		break
 	}
-	if !registered {
-		return fmt.Errorf("worktree path is not registered: %s", repo.WorktreePath)
-	}
+	return fmt.Errorf("worktree path is not registered: %s", repo.WorktreePath)
+}
 
+func checkCheckout(repo models.RepoWorktree) error {
+	var problems []error
 	branch, err := gitops.CurrentBranch(repo.WorktreePath)
 	if err != nil {
-		return fmt.Errorf("reading current branch: %w", err)
+		problems = append(problems, fmt.Errorf("reading current branch: %w", err))
+	} else if branch != repo.Branch {
+		problems = append(problems, fmt.Errorf("unexpected current branch %q (expected %q)", branch, repo.Branch))
 	}
-	if branch != repo.Branch {
-		return fmt.Errorf("unexpected current branch %q (expected %q)", branch, repo.Branch)
-	}
-
 	status, err := gitops.RepoStatus(repo.WorktreePath)
 	if err != nil {
-		return fmt.Errorf("reading worktree status: %w", err)
+		problems = append(problems, fmt.Errorf("reading worktree status: %w", err))
+	} else if status != "" {
+		problems = append(problems, fmt.Errorf("dirty worktree at %s:\n%s", repo.WorktreePath, status))
 	}
-	if status != "" {
-		return fmt.Errorf("dirty worktree; commit, stash, or use --force")
-	}
-	return nil
+	return errors.Join(problems...)
 }

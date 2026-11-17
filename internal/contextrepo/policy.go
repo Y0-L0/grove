@@ -16,6 +16,22 @@ func BaseBranch(repo models.RepoWorktree) (string, error) {
 	return gitops.ResolveBaseBranch(repo.SourceRepo)
 }
 
+// CheckedOutBase requires the context clone to have its local base checked out.
+func CheckedOutBase(repo models.RepoWorktree) (string, error) {
+	base, err := BaseBranch(repo)
+	if err != nil {
+		return "", err
+	}
+	branch, err := gitops.CurrentBranch(repo.SourceRepo)
+	if err != nil {
+		return "", err
+	}
+	if "refs/heads/"+branch != base {
+		return "", fmt.Errorf("context clone must have base branch %q checked out, found %q", base, branch)
+	}
+	return base, nil
+}
+
 // CheckDelete requires the operation policy to preserve records before removal.
 func CheckDelete(repos []models.RepoWorktree, merged bool) error {
 	for _, repo := range repos {

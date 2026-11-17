@@ -152,6 +152,10 @@ Post-hook failures leave completed workspace changes in place.
 The fork's delete policy runs before `pre_delete`, even with hooks disabled.
 It checks the workspace and merges committed context records before removal.
 `gw delete --force` skips those checks while retaining the records merge.
+Before removal, delete repeats validation after optional hooks and repository teardown commands.
+New context commits that have not reached the base branch block removal even with `--force`.
+Disable the mutating hook before retrying;
+if it changed the context checkout's branch, merge its commits into the workspace branch first.
 
 ---
 

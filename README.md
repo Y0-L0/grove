@@ -208,6 +208,11 @@ rebases the context branch onto its base and fast-forwards the clone before remo
 These commits remain unsigned.
 `--force` skips checks and discards uncommitted work, but still merges committed records.
 `--no-hooks` skips optional lifecycle hooks; delete checks and records merging still run.
+Delete repeats validation after optional hooks and repository teardown commands.
+If a hook commits more context records, deletion stops until those commits reach the base branch,
+including with `--force`.
+Disable the mutating hook before retrying deletion.
+If it changed the context checkout's branch, merge that checkout's commits into the workspace branch first.
 Records-aware rename, the index command and reopen wait for slice 9;
 agent rules generation waits for slice 8.
 Do not rename context-bearing workspaces until records-aware rename is implemented.

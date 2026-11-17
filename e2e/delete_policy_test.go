@@ -343,3 +343,141 @@ func TestDeleteReportsAllProblemsWithoutChanges(t *testing.T) {
 		e.requireExists(filepath.Join(ws.Path, "api", "untracked"))
 	})
 }
+
+func TestDeletePreservesWorkCreatedByHooks(t *testing.T) {
+	for _, phase := range []string{"pre_delete", "teardown"} {
+		t.Run(phase, func(t *testing.T) {
+			for _, change := range []string{"dirty code", "unpushed code", "committed records", "temporary worktree", "switched branch"} {
+				t.Run(change, func(t *testing.T) {
+					forEachUser(t, func(t *testing.T, e *env) {
+						api := e.createRepoWithHistory("api", 1)
+						e.init()
+						source := e.configureContext("work")
+						e.mustGW("create", "login", "--repos", "api")
+						ws := e.showWorkspace("login")
+						code := filepath.Join(ws.Path, "api")
+						context := filepath.Join(ws.Path, filepath.Base(source))
+						marker := filepath.Join(code, "final.txt")
+						command := "printf final > " + strconv.Quote(marker)
+						switch change {
+						case "unpushed code":
+							command += " && git -C " + strconv.Quote(code) + " add final.txt && git -C " + strconv.Quote(code) + " commit --no-gpg-sign -m Final"
+						case "committed records":
+							marker = filepath.Join(context, "records", "login", "final.md")
+							command = "printf final > " + strconv.Quote(marker) + " && git -C " + strconv.Quote(context) + " add records/login/final.md && git -C " + strconv.Quote(context) + " commit --no-gpg-sign -m Final"
+						case "temporary worktree":
+							temporary := filepath.Join(ws.Path, "api-review")
+							marker = filepath.Join(temporary, ".git")
+							command = "git -C " + strconv.Quote(api) + " worktree add --detach " + strconv.Quote(temporary)
+						case "switched branch":
+							command += " && git -C " + strconv.Quote(code) + " switch -c final-branch"
+						}
+						e.installDeleteHook(phase, api, command)
+						e.gw("delete", "login").mustFail(t)
+						e.showWorkspace("login")
+						e.requireExists(marker)
+						if !e.branchExists(source, e.branch("login")) {
+							t.Fatal("hook-created records branch was deleted")
+						}
+						if change == "committed records" {
+							e.installDeleteHook(phase, api, "true")
+							e.mustGW("delete", "login")
+							e.requireMissing(ws.Path)
+							if got := e.git(source, "show", "main:records/login/final.md"); got != "final" {
+								t.Fatalf("retry lost hook-created records: %q", got)
+							}
+						}
+					})
+				})
+			}
+		})
+	}
+}
+
+func TestForcedDeletePreservesRecordsCreatedByHooks(t *testing.T) {
+	for _, phase := range []string{"pre_delete", "teardown"} {
+		t.Run(phase, func(t *testing.T) {
+			for _, checkout := range []string{"workspace branch", "other branch", "detached"} {
+				t.Run(checkout, func(t *testing.T) {
+					forEachUser(t, func(t *testing.T, e *env) {
+						api := e.createRepoWithHistory("api", 1)
+						e.init()
+						source := e.configureContext("work")
+						e.mustGW("create", "login", "--repos", "api")
+						ws := e.showWorkspace("login")
+						context := filepath.Join(ws.Path, filepath.Base(source))
+						git := "git -C " + strconv.Quote(context)
+						command := ""
+						switch checkout {
+						case "other branch":
+							command = git + " switch -c final-records && "
+						case "detached":
+							command = git + " switch --detach && "
+						}
+						marker := filepath.Join(context, "records", "login", "final.md")
+						command += "printf final > " + strconv.Quote(marker) + " && " + git + " add records/login/final.md && " + git + " commit --no-gpg-sign -m Final"
+						e.installDeleteHook(phase, api, command)
+						e.gw("delete", "login", "--force").mustFail(t)
+						e.showWorkspace("login")
+						e.requireExists(marker)
+						if got := e.git(context, "show", "HEAD:records/login/final.md"); got != "final" {
+							t.Fatalf("hook-created records changed: %q", got)
+						}
+						e.installDeleteHook(phase, api, "true")
+						if checkout != "workspace branch" {
+							e.gw("delete", "login", "--force").mustFail(t)
+							e.requireExists(marker)
+							if got := e.git(context, "show", "HEAD:records/login/final.md"); got != "final" {
+								t.Fatalf("forced retry lost hook-created records: %q", got)
+							}
+							// Preserve the unexpected checkout's history on the stored branch.
+							e.git(context, "branch", "-f", e.branch("login"), "HEAD")
+							e.git(context, "switch", e.branch("login"))
+						}
+						e.mustGW("delete", "login", "--force")
+						e.requireMissing(ws.Path)
+						if got := e.git(source, "show", "main:records/login/final.md"); got != "final" {
+							t.Fatalf("forced retry did not merge hook-created records: %q", got)
+						}
+					})
+				})
+			}
+		})
+	}
+}
+
+func TestDeleteAllowsBaseAdvancementInHooks(t *testing.T) {
+	for _, phase := range []string{"pre_delete", "teardown"} {
+		t.Run(phase, func(t *testing.T) {
+			forEachUser(t, func(t *testing.T, e *env) {
+				api := e.createRepoWithHistory("api", 1)
+				e.init()
+				source := e.configureContext("work")
+				e.mustGW("create", "login", "--repos", "api")
+				before := e.git(source, "rev-parse", "main")
+				e.installDeleteHook(phase, api, "git -C "+strconv.Quote(source)+" commit --no-gpg-sign --allow-empty -m 'Advance base'")
+				e.mustGW("delete", "login")
+				e.requireMissing(e.workspacePath("login"))
+				if got := e.git(source, "rev-parse", "main"); got == before {
+					t.Fatal("hook did not advance the context base")
+				}
+			})
+		})
+	}
+}
+
+func (e *env) installDeleteHook(phase, source, command string) {
+	e.t.Helper()
+	if phase == "teardown" {
+		e.writeFile(filepath.Join(source, ".grove.toml"), "teardown = "+strconv.Quote(command)+"\n")
+		return
+	}
+	path := filepath.Join(e.groveDir, "config.toml")
+	config, err := os.ReadFile(path)
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	// Replace the prior test hook when checking that deletion can be retried.
+	body := strings.Split(string(config), "\n[hooks.pre_delete]")[0]
+	e.writeFile(path, body+"\n[hooks.pre_delete]\ncommand = "+strconv.Quote(command)+"\non_failure = 'abort'\n")
+}

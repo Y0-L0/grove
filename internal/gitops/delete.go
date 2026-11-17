@@ -1,5 +1,11 @@
 package gitops
 
+// CheckAncestor requires every commit on ref to be reachable from base.
+func CheckAncestor(path, ref, base string) error {
+	_, err := runGit(path, "merge-base", "--is-ancestor", ref, base)
+	return err
+}
+
 // UnpushedCommits lists commits absent from every local remote-tracking branch.
 // It deliberately does not fetch, so deletion works without network access.
 func UnpushedCommits(repo, branch string) (string, error) {

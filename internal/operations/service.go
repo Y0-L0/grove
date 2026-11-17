@@ -197,10 +197,6 @@ func (s *Service) Delete(req DeleteRequest) (DeleteResult, error) {
 	req.Options.ExpectedCreatedAt = ws.CreatedAt
 	req.Options.ExpectedPath = ws.Path
 	req.Options.ExpectedWorkspace = ws
-	if req.Options.RecordsMerged {
-		// Policy has checked remote reachability; primitive cleanup may drop branches.
-		req.Options.Force = true
-	}
 	if err := s.Workspace.DeleteWithOptions(req.Name, req.Options); err != nil {
 		return result, err
 	}

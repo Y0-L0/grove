@@ -14,7 +14,10 @@ Existing workspaces keep their recorded paths.
 
 - **Always pass explicit names and flags.** Without a TTY, pickers exit 1 with `interactive selection requires a terminal`. Never rely on a picker or prompt.
 - **stdout is data, stderr is chatter.** Parse only `-o json|jsonl|name|path` or `--json` output. Never parse tables or stderr.
-- **`gw delete` does not ask.** It checks every worktree, merges context records, then removes the workspace and its branches. Use `--force` only when the user authorizes discarding uncommitted work and unpushed code commits. Committed context records still merge, including with `--no-hooks`.
+- **`gw delete` does not ask.**
+  It checks every worktree, merges context records, then removes the workspace and its branches.
+  Use `--force` only when the user authorizes discarding uncommitted work and unpushed code commits.
+  Committed context records still merge, including with `--no-hooks`.
 - **Confirmation prompts silently decline without input.** `gw remove-repo -r X` (without `-f`) and `gw create --replace` (without `-f`) print a prompt, do nothing, and exit 0. Check the result; do not assume success from the exit code.
 - **Do not pass `-n`/`--no-hooks`** unless the user asks. Hooks may enforce the user's policy (for example a `pre_delete` that blocks deletion).
 - **Do not run `prune --yes`, `prune branches --yes`, `reset --discard`, `doctor --fix`, or `create --replace -f`** without the user's explicit go-ahead. Run the read-only form first and show the result.
