@@ -75,5 +75,6 @@ No workflow refreshes the wiki; regenerate it manually with `openwiki code --upd
 ## This fork
 
 This branch is a fork of `nicksenap/grove` for the task workflow under `~/git/agent/`.
-Its commits end with `Assisted-by: Claude:<model>`, such as `Assisted-by: Claude:claude-opus-5-5`,
+Its commits end with `Assisted-by: <agent>:<model>`,
+such as `Assisted-by: Claude:claude-opus-5-5` or `Assisted-by: Codex:GPT-6`,
 instead of the issue reference the workflow's `AGENTS.md` asks for.
