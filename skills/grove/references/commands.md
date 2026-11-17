@@ -32,8 +32,13 @@ and derives the branch as `<owner_prefix>/<name>`.
 With `--no-hooks`, the default branch is the workspace name alone,
 and `owner_prefix` is not required.
 `--track` requires an explicit `-b`.
+Create and add-repo reuse local branches first, then adopt same-named origin branches,
+or create branches from base without an upstream.
+`--track` skips branch resolvers and warns when the remote branch is missing.
+Adoption works with `--no-hooks`; SSH push-URL configuration requires hooks.
+HTTPS credentials come from Git's configuration.
 The `[types.work]` and `[types.priv]` tables each support a `context` repository path.
-Creating context worktrees is deferred to the next slice.
+Create adds the configured context worktree and commits the workspace's records.
 
 ## Setup and config
 

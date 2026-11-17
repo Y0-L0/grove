@@ -18,11 +18,11 @@ import (
 type BranchMode int
 
 const (
-	// BranchModeCreate creates a new branch from the resolved base branch.
-	// This is the default and matches Grove's historical behavior.
+	// BranchModeCreate reuses a local branch, adopts origin's same-named branch,
+	// or creates a branch from base without an upstream, in that order.
 	BranchModeCreate BranchMode = iota
-	// BranchModeTrack checks out an existing remote branch (e.g. a pull-request
-	// head) as a tracking branch instead of creating a new one from base.
+	// BranchModeTrack also skips branch resolution and warns on a missing
+	// remote branch before falling back to a new branch from base.
 	BranchModeTrack
 )
 
@@ -39,12 +39,8 @@ type CreateOpts struct {
 	// When TrackBranchRepo is empty, BranchMode applies to every repo; when set,
 	// it applies only to that one repo and all others use BranchModeCreate.
 	//
-	// A PR URL identifies exactly one repo+branch, so a resolver names that repo
-	// in TrackBranchRepo — sibling repos added to the same workspace then still
-	// get fresh branches from base rather than coincidentally tracking a remote
-	// branch of the same name. Track mode always falls back to create mode for
-	// any repo where the remote branch does not exist, so a blanket
-	// (empty-TrackBranchRepo) track is safe too.
+	// All repos adopt same-named origin branches by default. Track mode also
+	// warns when the remote branch is missing before creating one from base.
 	BranchMode      BranchMode
 	TrackBranchRepo string
 
@@ -185,8 +181,8 @@ func provisionWorktreeNoFetch(sourcePath, repoName, wsPath, branch string, mode 
 		return nil, fmt.Errorf("branch %s already has a worktree in %s", branch, repoName)
 	}
 
-	// Tracking creates the local branch as part of git worktree add.
-	if mode == BranchModeTrack && !gitops.BranchExists(sourcePath, branch) {
+	// Prefer the same-named remote branch before creating a branch from base.
+	if !gitops.BranchExists(sourcePath, branch) {
 		if gitops.RemoteBranchExists(sourcePath, branch) {
 			logging.Info("tracking existing remote branch %q in %s", branch, repoName)
 			if err := gitops.WorktreeAddTracking(sourcePath, wtPath, branch); err != nil {
@@ -208,7 +204,9 @@ func provisionWorktreeNoFetch(sourcePath, repoName, wsPath, branch string, mode 
 				branchCreated: true,
 			}, nil
 		}
-		console.Warningf("%s: remote branch %s not found — creating a new branch from base instead", repoName, branch)
+		if mode == BranchModeTrack {
+			console.Warningf("%s: remote branch %s not found — creating a new branch from base instead", repoName, branch)
+		}
 	}
 
 	branchCreated, err := ensureWorkspaceBranch(sourcePath, repoName, branch)

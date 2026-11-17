@@ -172,6 +172,18 @@ Without `--branch`, it uses the workspace name as the branch name.
 Shell resolvers still run after Go resolvers and can change the resulting branch.
 See [docs/hooks.md](docs/hooks.md#resolving-the-branch-name).
 
+Create and add-repo reuse an existing local branch first.
+Otherwise, they adopt `origin/<branch>` with its upstream when it exists,
+or create a branch from base without an upstream.
+`--track` skips branch resolvers and warns when the remote branch is missing.
+Adoption also works with `--no-hooks`.
+
+For HTTPS origins, the Go lifecycle hooks set an SSH `remote.origin.pushurl`
+when none exists, preserving the fetch URL and existing push URLs.
+Context repositories are excluded, and `--no-hooks` skips this configuration.
+Configure HTTPS credential helpers through Git, including inside the sandbox.
+Grove preserves credential configuration.
+
 When the type has a configured context repository,
 create adds its worktree on the workspace branch, named after its source clone.
 The context path supports `~/` and may sit outside `repo_dirs`.

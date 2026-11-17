@@ -186,9 +186,9 @@ func BranchExists(repo, branch string) bool {
 	return err == nil
 }
 
-// CreateBranch creates a new branch at the given start point.
+// CreateBranch creates a new branch without inheriting the start point's upstream.
 func CreateBranch(repo, branch, startPoint string) error {
-	args := []string{"branch", branch}
+	args := []string{"branch", "--no-track", branch}
 	if startPoint != "" {
 		args = append(args, startPoint)
 	}

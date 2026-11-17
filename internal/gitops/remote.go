@@ -7,6 +7,40 @@ import (
 	"strings"
 )
 
+// EnsureSSHPushURL gives HTTPS origins an SSH push URL without changing credentials.
+// Read the configured URL directly because remote get-url expands insteadOf rules.
+func EnsureSSHPushURL(repo string) error {
+	config, err := runGit(repo, "config", "--null", "--list")
+	if err != nil {
+		return fmt.Errorf("reading remote configuration: %w", err)
+	}
+	var origin string
+	foundOrigin := false
+	for entry := range strings.SplitSeq(config, "\x00") {
+		key, value, _ := strings.Cut(entry, "\n")
+		switch key {
+		case "remote.origin.pushurl":
+			return nil
+		case "remote.origin.url":
+			// Git fetches from the first URL when an origin has several.
+			if !foundOrigin {
+				origin = value
+				foundOrigin = true
+			}
+		}
+	}
+	parsed, err := url.Parse(origin)
+	if err != nil || parsed.Scheme != "https" {
+		return nil
+	}
+	if parsed.Hostname() == "" || strings.Trim(parsed.Path, "/") == "" {
+		return fmt.Errorf("HTTPS origin must include a host and repository path")
+	}
+	path := strings.TrimSuffix(strings.TrimPrefix(parsed.Path, "/"), ".git") + ".git"
+	_, err = runGit(repo, "config", "--local", "remote.origin.pushurl", "git@"+parsed.Hostname()+":"+path)
+	return err
+}
+
 // CanonicalRemoteIdentity normalizes a Git remote for identity comparison.
 // Network remotes use lowercase host plus a case-preserving repository path.
 func CanonicalRemoteIdentity(value string) (string, error) {

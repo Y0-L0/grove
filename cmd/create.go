@@ -120,8 +120,7 @@ var createCmd = &cobra.Command{
 		}
 
 		// Build provenance + branch-mode options. A source URL is opaque to core;
-		// --track checks out an existing remote branch (e.g. a PR head) instead
-		// of creating a new one, falling back to create-mode if it is missing.
+		// --track skips branch resolvers and warns when the remote branch is missing.
 		var source *models.WorkspaceSource
 		if createSourceURL != "" || createSourceProvide != "" {
 			source = &models.WorkspaceSource{
@@ -198,7 +197,7 @@ func init() {
 	createCmd.Flags().BoolVar(&createAll, "all", false, "Use all discovered repos")
 	createCmd.Flags().BoolVar(&createReplace, "replace", false, "Delete the current workspace (detected from cwd) before creating the new one")
 	createCmd.Flags().BoolVarP(&createForce, "force", "f", false, "Skip --replace confirmation prompt")
-	createCmd.Flags().BoolVar(&createTrack, "track", false, "Check out an existing remote branch (e.g. a PR head) instead of creating a new one")
+	createCmd.Flags().BoolVar(&createTrack, "track", false, "Skip branch resolvers and warn if the explicit branch is missing on origin")
 	createCmd.Flags().StringVar(&createSourceURL, "source-url", "", "Record the source URL this workspace was seeded from")
 	createCmd.Flags().StringVar(&createSourceProvide, "source-provider", "", "Source provider label (e.g. github, notion, slack)")
 	createCmd.Flags().StringVar(&createSourceRef, "source-ref", "", "Source ref (PR number, page id, message ts)")
