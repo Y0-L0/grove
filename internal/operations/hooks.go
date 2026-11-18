@@ -28,6 +28,18 @@ type DeletePolicy interface {
 	PrepareDelete(models.Workspace, workspace.RemoveOptions) error
 }
 
+// CreatePolicy checks required constraints even with optional hooks disabled.
+type CreatePolicy interface {
+	CheckCreate(CreateRequest) error
+}
+
+// RenamePolicy preserves records when a workspace name changes.
+// It applies even when optional lifecycle hooks are disabled.
+type RenamePolicy interface {
+	CheckRename(models.Workspace, string) error
+	RenameRecords(models.Workspace, string) error
+}
+
 var registeredHooks = []Hooks{ShellHooks{}}
 
 // RegisterHooks sets the lifecycle implementations in execution order.

@@ -86,6 +86,8 @@ func init() {
 		removeRepoCmd,
 		reposCmd,
 		renameCmd,
+		reopenCmd,
+		signCmd,
 		syncCmd,
 		resetCmd,
 		doctorCmd,

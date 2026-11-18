@@ -16,7 +16,9 @@ Global flags: `--verbose` (debug log to `~/.grove/grove.log`), `-n`/`--no-hooks`
 | `gw go` | `gw go NAME` (prints path, no newline) | >1 workspace → picker | `-d` deletes the workspace after navigating away |
 | `gw add-repo` | `gw add-repo [NAME] -r a,b` (names or git URLs; URLs clone into the first repo dir) | `-r` → picker | No |
 | `gw remove-repo` | `gw remove-repo [NAME] -r a -f`, or `echo y \| gw remove-repo [NAME] -r a` to keep the dirty-worktree check | `-r` → picker; always prompts without `-f` | **Yes**: removes the worktree and its branch; `-f` also skips the dirty check |
-| `gw rename` | `gw rename OLD --to NEW` | `OLD` → picker | No |
+| `gw rename` | `gw rename OLD NEW`, or `gw rename OLD --to NEW` | `OLD` → picker | No |
+| `gw reopen` | `gw reopen NAME` | None | Recreates only the context worktree; records and the original branch name survive |
+| `gw sign` | `gw sign [NAME]` | None | Autosquashes fixups, signs code commits and pushes branches with force-with-lease |
 | `gw sync` | `gw sync [NAME]` | — | Rebases local branches onto base (history rewrite); skips dirty repos |
 | `gw reset` | `gw reset [NAME] [--discard]` | — | `--discard` drops tracked local changes |
 | `gw delete` / `gw ws delete` | `gw delete NAME... [--force]`; or `... \| gw delete --stdin --yes` | no names → picker | Checks all worktrees and merges committed context records before removal. `--force` skips checks and discards uncommitted work and unpushed code. Pre-existing branches are kept. |
@@ -39,6 +41,16 @@ Adoption works with `--no-hooks`; SSH push-URL configuration requires hooks.
 HTTPS credentials come from Git's configuration.
 The `[types.work]` and `[types.priv]` tables each support a `context` repository path.
 Create adds the configured context worktree and commits the workspace's records.
+
+With context repositories configured, the default list includes active and deleted entries,
+goals, repository names and Claude sessions.
+JSON entries add `status`, `goal`, `repositories` and `sessions`.
+Sessions include `id`, `first_timestamp`, `last_timestamp`, `ai_title`, `cwd`
+and `resume_command`.
+The `-s` list retains Grove's active Git summaries.
+Rename commits the records move without changing branches.
+Reopen removes deleted metadata and regenerates agent rules unless hooks are disabled.
+Required create-name checks, rename records and reopen metadata run with `--no-hooks`.
 
 ## Setup and config
 

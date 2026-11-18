@@ -1,18 +1,18 @@
 package cmd
 
 import (
+	"github.com/nicksenap/grove/internal/operations"
 	"github.com/nicksenap/grove/internal/picker"
 	"github.com/nicksenap/grove/internal/state"
-	"github.com/nicksenap/grove/internal/workspace"
 	"github.com/spf13/cobra"
 )
 
 var renameTo string
 
 var renameCmd = &cobra.Command{
-	Use:   "rename [NAME]",
+	Use:   "rename [NAME] [NEW]",
 	Short: "Rename a workspace",
-	Args:  cobra.MaximumNArgs(1),
+	Args:  cobra.MaximumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		var name string
 		if len(args) > 0 {
@@ -36,11 +36,18 @@ var renameCmd = &cobra.Command{
 			name = selected
 		}
 
-		if renameTo == "" {
+		newName := renameTo
+		if len(args) == 2 {
+			if newName != "" {
+				exitError("supply NEW or --to, not both")
+			}
+			newName = args[1]
+		}
+		if newName == "" {
 			exitError("--to is required")
 		}
 
-		if err := workspace.NewService().Rename(name, renameTo); err != nil {
+		if err := operations.NewService().Rename(name, newName); err != nil {
 			exitError(err.Error())
 		}
 	},

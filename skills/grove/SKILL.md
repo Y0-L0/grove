@@ -76,6 +76,20 @@ gw sync fix-auth                           # rebase every repo onto its base bra
 - `gw sync` skips dirty repos and aborts a failed rebase. It rewrites local branch history, so warn the user first if the branch is shared or already pushed.
 - `gw go NAME` also prints the path, but without a trailing newline and meant for the user's shell function. Prefer `gw ws show NAME -o path`.
 
+With context repositories configured, `gw list -o json` also includes deleted workspaces,
+their goals and Claude sessions with resume commands.
+`gw rename OLD NEW` moves committed records and preserves every branch name.
+`gw reopen NAME` recreates only the context worktree and prints the command
+for adding the former code repositories.
+Create refuses names with existing records, including across workspace types.
+
+Run `gw sign NAME` only when the user asks to sign and push.
+It autosquashes fixups, rewrites unsigned code commits with signatures,
+verifies all code branches before any push and sets same-named upstreams.
+Context commits stay unsigned and local.
+The user runs this outside the sandbox with their signing and SSH keys.
+A signing failure leaves Git's rebase available for inspection or abort.
+
 ## 4. Clean up
 
 Before deleting, confirm nothing will be lost:

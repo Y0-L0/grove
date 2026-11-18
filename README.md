@@ -30,7 +30,14 @@ Grove is a single static binary with no dependencies. It requires `git` on `PATH
 
 ### 1. Install Grove
 
-Pick **any one** of the following methods:
+For this fork, uninstall an existing upstream `gw` first.
+Then run this in the clone:
+
+```bash
+go install ./cmd/gw
+```
+
+The methods below install upstream Grove.
 
 **Homebrew** (macOS / Linux)
 

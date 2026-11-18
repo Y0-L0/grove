@@ -3,6 +3,9 @@ package cmd
 import (
 	"os"
 
+	"github.com/nicksenap/grove/internal/config"
+	"github.com/nicksenap/grove/internal/workflow"
+
 	"github.com/nicksenap/grove/internal/models"
 
 	"github.com/nicksenap/grove/internal/console"
@@ -85,6 +88,20 @@ func doListAll() {
 		return
 	}
 
+	cfg, err := config.Load()
+	if err != nil {
+		exitError(err.Error())
+	}
+	if cfg != nil && len(cfg.Types) > 0 {
+		entries, err := workflow.Index(cfg)
+		if err != nil {
+			exitError(err.Error())
+		}
+		if err := writeIndex(os.Stdout, entries, format); err != nil {
+			exitError(err.Error())
+		}
+		return
+	}
 	workspaces, err := state.Load()
 	if err != nil {
 		exitError(err.Error())

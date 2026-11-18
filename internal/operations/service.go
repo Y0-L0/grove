@@ -82,7 +82,17 @@ func (e *HookError) Unwrap() error { return e.Err }
 // again: the resolved branch is stored and reused by add-repo. It is skipped
 // with --track, which checks out an existing branch by its real name.
 func (s *Service) ResolveBranch(req CreateRequest) (CreateRequest, error) {
-	if req.branchResolved || req.Options.BranchMode == workspace.BranchModeTrack {
+	if req.branchResolved {
+		return req, nil
+	}
+	for _, h := range s.hooks() {
+		if policy, ok := h.(CreatePolicy); ok {
+			if err := policy.CheckCreate(req); err != nil {
+				return req, err
+			}
+		}
+	}
+	if req.Options.BranchMode == workspace.BranchModeTrack {
 		return req, nil
 	}
 	branch, err := s.callResolver(req)
