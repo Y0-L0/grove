@@ -252,6 +252,51 @@ func TestFreshWorkspaceBranchesHaveNoUpstream(t *testing.T) {
 	})
 }
 
+func TestWorkspacePushDoesNotUpdateMain(t *testing.T) {
+	t.Setenv("GIT_CONFIG_COUNT", "0")
+	forEachUser(t, func(t *testing.T, env *env) {
+		for _, operation := range []string{"create", "add-repo", "track-fallback"} {
+			t.Run(operation, func(t *testing.T) {
+				env := newEnv(t, env.user)
+				repo := env.createRepoWithHistory("svc-auth", 1)
+				origin := filepath.Join(env.home, "svc-auth-origin.git")
+				mainBefore := env.git(origin, "rev-parse", "refs/heads/main")
+				env.git(repo, "config", "branch.autoSetupMerge", "true")
+				env.git(repo, "config", "push.default", "upstream")
+				env.git(repo, "config", "push.autoSetupRemote", "true")
+				env.init()
+				branch := env.branch("safe-push")
+				if operation == "add-repo" {
+					env.createRepo("seed")
+					env.mustGW("--no-hooks", "create", "safe-push", "--branch", branch, "--repos", "seed")
+					env.mustGW("--no-hooks", "add-repo", "safe-push", "--repos", "svc-auth")
+				} else {
+					args := []string{"--no-hooks", "create", "safe-push", "--branch", branch, "--repos", "svc-auth"}
+					if operation == "track-fallback" {
+						args = append(args, "--track")
+					}
+					env.mustGW(args...)
+				}
+				worktree := env.worktree("safe-push", "svc-auth")
+				env.writeFile(filepath.Join(worktree, "workspace.txt"), "workspace work\n")
+				env.git(worktree, "add", "workspace.txt")
+				env.git(worktree, "commit", "-q", "-m", "workspace work")
+				want := env.git(worktree, "rev-parse", "HEAD")
+				env.git(worktree, "push")
+				if got := env.git(origin, "rev-parse", "refs/heads/main"); got != mainBefore {
+					t.Errorf("plain git push changed remote main from %s to %s", mainBefore, got)
+				}
+				if got, err := env.gitAllowFail(origin, "rev-parse", "--verify", "refs/heads/"+branch); err != nil || got != want {
+					t.Errorf("remote workspace branch = %q, %v, want %s", got, err, want)
+				}
+				if got := env.upstream(worktree); got != "origin/"+branch {
+					t.Errorf("upstream after push = %q, want origin/%s", got, branch)
+				}
+			})
+		}
+	})
+}
+
 func TestWorkspacePushURLsAndGitCredentials(t *testing.T) {
 	forEachUser(t, func(t *testing.T, env *env) {
 		first := env.createRepoWithHistory("svc-auth", 1)
