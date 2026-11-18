@@ -199,6 +199,27 @@ with `base_branch` in the source clone's `.grove.toml` overriding the default.
 For a local repository without `main` or `master`, configure that base explicitly.
 `remove-repo` refuses the context worktree, including with `--force`.
 
+To generate workspace agent rules, configure the template at the top level of
+`~/.grove/config.toml`, using an absolute path or a path beginning with `~/`:
+
+```toml
+agent_rules_template = "~/src/grove/templates/AGENTS.md"
+```
+
+Create, add-repo and sync replace the workspace's `AGENTS.md` with this template
+followed by `agent-rules.md` from its context worktree, when that file exists.
+The generated disclaimer names both source paths.
+`CLAUDE.md` contains `@AGENTS.md`.
+Before generation, the context worktree rebases onto its local base branch,
+normally `main`, including any workspace commits.
+Dirty or unexpected context branches and rebase failures stop generation
+and preserve the existing agent files.
+Context rebases keep commits unsigned, including during sync.
+Edit the sources, since regeneration replaces local edits to the generated files.
+An unset `agent_rules_template` disables generation.
+`--no-hooks` skips generation and the additional context rebase;
+sync still performs its normal repository rebases.
+
 Delete reports dirty or unregistered worktrees, unexpected branches,
 unpushed code commits and temporary worktrees before changing anything.
 Plain directories such as `vmtest/` go with the workspace.
@@ -213,8 +234,7 @@ If a hook commits more context records, deletion stops until those commits reach
 including with `--force`.
 Disable the mutating hook before retrying deletion.
 If it changed the context checkout's branch, merge that checkout's commits into the workspace branch first.
-Records-aware rename, the index command and reopen wait for slice 9;
-agent rules generation waits for slice 8.
+Records-aware rename, the index command and reopen wait for slice 9.
 Do not rename context-bearing workspaces until records-aware rename is implemented.
 `doctor --fix` retains missing context entries for path repair.
 A failed `post_create` leaves the created workspace in state;

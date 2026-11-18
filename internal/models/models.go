@@ -88,13 +88,14 @@ type Preset struct {
 
 // Config is the global Grove configuration (~/.grove/config.toml).
 type Config struct {
-	OwnerPrefix  string                   `toml:"owner_prefix,omitempty"`
-	Types        map[string]WorkspaceType `toml:"types,omitempty"`
-	RepoDirs     []string                 `toml:"repo_dirs"`
-	WorkspaceDir string                   `toml:"workspace_dir"`
-	StateDir     string                   `toml:"state_dir,omitempty"`
-	Presets      map[string]Preset        `toml:"presets"`
-	Hooks        map[string]Hook          `toml:"hooks"`
+	AgentRulesTemplate string                   `toml:"agent_rules_template,omitempty"`
+	OwnerPrefix        string                   `toml:"owner_prefix,omitempty"`
+	Types              map[string]WorkspaceType `toml:"types,omitempty"`
+	RepoDirs           []string                 `toml:"repo_dirs"`
+	WorkspaceDir       string                   `toml:"workspace_dir"`
+	StateDir           string                   `toml:"state_dir,omitempty"`
+	Presets            map[string]Preset        `toml:"presets"`
+	Hooks              map[string]Hook          `toml:"hooks"`
 	// Legacy field — auto-migrated to RepoDirs
 	ReposDir string `toml:"repos_dir"`
 }

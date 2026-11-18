@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"github.com/nicksenap/grove/internal/config"
+	"github.com/nicksenap/grove/internal/workflow"
 	"github.com/nicksenap/grove/internal/workspace"
 	"github.com/spf13/cobra"
 )
@@ -22,6 +24,13 @@ var syncCmd = &cobra.Command{
 		}
 
 		if err := workspace.NewService().Sync(ws.Name); err != nil {
+			exitError(err.Error())
+		}
+		cfg, err := config.Load()
+		if err != nil {
+			exitError(err.Error())
+		}
+		if err := workflow.GenerateRules(*ws, cfg); err != nil {
 			exitError(err.Error())
 		}
 	},

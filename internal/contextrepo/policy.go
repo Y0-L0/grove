@@ -2,11 +2,31 @@
 package contextrepo
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/nicksenap/grove/internal/gitops"
 	"github.com/nicksenap/grove/internal/models"
 )
+
+// CheckRebase requires a clean context checkout on its recorded branch.
+func CheckRebase(repo models.RepoWorktree) error {
+	branch, err := gitops.CurrentBranch(repo.WorktreePath)
+	if err != nil {
+		return err
+	}
+	if branch != repo.Branch {
+		return fmt.Errorf("context worktree is on %q, expected %q", branch, repo.Branch)
+	}
+	status, err := gitops.RepoStatus(repo.WorktreePath)
+	if err != nil {
+		return err
+	}
+	if status != "" {
+		return errors.New("context worktree is dirty; commit or stash changes before rebasing")
+	}
+	return nil
+}
 
 // BaseBranch selects the local base for context worktrees.
 func BaseBranch(repo models.RepoWorktree) (string, error) {

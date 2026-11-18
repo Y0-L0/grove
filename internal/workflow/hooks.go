@@ -44,10 +44,22 @@ func (Hooks) PostCreate(ws models.Workspace) error {
 		}
 		ws = *current
 	}
-	return configureRemotes(ws)
+	if err := configureRemotes(ws); err != nil {
+		return err
+	}
+	return GenerateRules(ws, cfg)
 }
 
-func (Hooks) PostAddRepo(ws models.Workspace) error { return configureRemotes(ws) }
+func (Hooks) PostAddRepo(ws models.Workspace) error {
+	if err := configureRemotes(ws); err != nil {
+		return err
+	}
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+	return GenerateRules(ws, cfg)
+}
 
 func configureRemotes(ws models.Workspace) error {
 	for _, repo := range ws.Repos {

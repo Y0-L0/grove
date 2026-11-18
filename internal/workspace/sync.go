@@ -13,6 +13,12 @@ import (
 
 // syncOneRepo syncs a single repo.
 func (s *Service) syncOneRepo(r models.RepoWorktree) {
+	if r.Context {
+		if err := contextrepo.CheckRebase(r); err != nil {
+			console.Warningf("%s: skipping context rebase: %s", r.RepoName, err)
+			return
+		}
+	}
 	if !r.Context {
 		if err := gitops.Fetch(r.SourceRepo); err != nil {
 			console.Warningf("%s: fetch failed, using local state: %s", r.RepoName, err)
@@ -52,7 +58,11 @@ func (s *Service) syncOneRepo(r models.RepoWorktree) {
 		s.RunCmdSilent(r.WorktreePath, groveCfg.PreSync)
 	}
 
-	if err := gitops.RebaseOnto(r.WorktreePath, upstream); err != nil {
+	rebase := gitops.RebaseOnto
+	if r.Context {
+		rebase = gitops.RebaseUnsigned
+	}
+	if err := rebase(r.WorktreePath, upstream); err != nil {
 		console.Errorf("%s: rebase failed: %s", r.RepoName, err)
 		gitops.RebaseAbort(r.WorktreePath)
 		return
