@@ -256,6 +256,28 @@ Presets, plugins, hooks, and the full command reference are covered in [Workflow
 - [grove-rex](https://github.com/nicksenap/grove-rex) — [Rex](https://www.superlogical.com/rex) popup: `cmd+g` asks for a name, a preset or repos, and a branch, runs `gw create`, and opens the workspace as a Rex session; a `pre_delete` hook closes it on `gw delete`.
 - Plugins such as [gw-dispatch](https://github.com/nicksenap/gw-dispatch), [gw-run](https://github.com/nicksenap/gw-run), and [gw-recipe](https://github.com/nicksenap/gw-recipe) — see [docs/plugins.md](docs/plugins.md).
 
+## Recommended Git configuration
+
+These recommendations apply outside Grove and are left for the user to configure.
+Grove creates fresh workspace branches with `--no-track` regardless of these settings.
+
+Set `branch.autoSetupMerge = simple` in your Git configuration.
+Git then sets an upstream automatically only when a new branch has the same name
+as its remote starting branch.
+This prevents a differently named workspace branch created manually from `origin/main`
+from automatically tracking `origin/main`.
+It does not repair existing tracking configuration.
+See Git's [branch.autoSetupMerge documentation](https://git-scm.com/docs/git-config#Documentation/git-config.txt-branchautoSetupMerge).
+
+Add push protection for base branches such as `main`.
+A Git `pre-push` hook should inspect every destination ref supplied on standard input,
+and reject protected destinations unless the push has an explicit exception.
+Checking only the local branch name misses a workspace branch that tracks `origin/main`.
+Keep protected branch names and exceptions aligned with each repository's workflow,
+and preserve existing hooks when installing protection.
+Local hooks can be bypassed; enforce the policy on the server where required.
+See Git's [pre-push hook documentation](https://git-scm.com/docs/githooks#_pre_push).
+
 ## Upgrading
 
 If you installed with Homebrew:
