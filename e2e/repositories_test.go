@@ -69,6 +69,21 @@ func TestCreateTrackExistingRemoteBranch(t *testing.T) {
 	})
 }
 
+func TestCreateRepeatedRepoFlags(t *testing.T) {
+	forEachUser(t, func(t *testing.T, env *env) {
+		env.createRepo("svc-auth")
+		origin := env.createBareOrigin("remote-origin.git")
+		env.seedBareOrigin(origin, "remote content\n")
+		env.init()
+
+		env.mustGW("create", "test-ws", "--branch", env.branch("feat/e2e"),
+			"-r", "svc-auth", "-r", env.remoteURL(origin))
+
+		env.requireExists(env.worktree("test-ws", "remote-origin"))
+		env.requireExists(env.worktree("test-ws", "svc-auth"))
+	})
+}
+
 func TestCreateTrackFallback(t *testing.T) {
 	forEachUser(t, func(t *testing.T, env *env) {
 		origin := env.createBareOrigin("pr-svc-origin.git")
