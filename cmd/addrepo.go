@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var addRepoRepos string
+var addRepoRepos []string
 
 var addRepoCmd = &cobra.Command{
 	Use:   "add-repo [NAME]",
@@ -35,8 +35,8 @@ var addRepoCmd = &cobra.Command{
 		repoMap := discover.RepoMap(repos)
 
 		var repoNames []string
-		if addRepoRepos != "" {
-			repoNames = parseRepoFlag(addRepoRepos)
+		if len(addRepoRepos) > 0 {
+			repoNames = trimRepoNames(addRepoRepos)
 			// Clone any remote URLs into the first repo_dir
 			for i, repoName := range repoNames {
 				if gitops.IsGitURL(repoName) {
@@ -85,15 +85,15 @@ var addRepoCmd = &cobra.Command{
 }
 
 func init() {
-	addRepoCmd.Flags().StringVarP(&addRepoRepos, "repos", "r", "", "Comma-separated repo names or git URLs")
+	addRepoCmd.Flags().StringSliceVarP(&addRepoRepos, "repos", "r", nil, "Repo names or git URLs, comma-separated or repeated")
 	addRepoCmd.RegisterFlagCompletionFunc("repos", completeAddRepoNames)
 	addRepoCmd.ValidArgsFunction = completeWorkspaceNames
 }
 
-func parseRepoFlag(value string) []string {
-	parts := strings.Split(value, ",")
-	for i := range parts {
-		parts[i] = strings.TrimSpace(parts[i])
+func trimRepoNames(values []string) []string {
+	parts := make([]string, len(values))
+	for i, value := range values {
+		parts[i] = strings.TrimSpace(value)
 	}
 	return parts
 }

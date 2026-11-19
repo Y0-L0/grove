@@ -151,6 +151,33 @@ func TestAddRepoFromRemoteURL(t *testing.T) {
 	})
 }
 
+func TestAddAndRemoveRepeatedRepoFlags(t *testing.T) {
+	forEachUser(t, func(t *testing.T, env *env) {
+		for _, name := range []string{"svc-auth", "svc-api", "svc-gateway", "svc-worker"} {
+			env.createRepo(name)
+		}
+		env.init()
+		env.mustGW("create", "test-ws", "--branch", env.branch("feat/e2e"), "-r", "svc-auth")
+
+		env.mustGW("add-repo", "test-ws", "-r", "svc-api", "-r", " svc-gateway, svc-worker ")
+		for _, name := range []string{"svc-api", "svc-gateway", "svc-worker"} {
+			env.requireExists(env.worktree("test-ws", name))
+		}
+		if got := len(env.showWorkspace("test-ws").Repos); got != 4 {
+			t.Fatalf("expected 4 repos after add-repo, got %d", got)
+		}
+
+		env.mustGW("remove-repo", "test-ws", "-r", "svc-api", "-r", " svc-gateway, svc-worker ", "--force")
+		for _, name := range []string{"svc-api", "svc-gateway", "svc-worker"} {
+			env.requireMissing(env.worktree("test-ws", name))
+		}
+		env.requireExists(env.worktree("test-ws", "svc-auth"))
+		if got := len(env.showWorkspace("test-ws").Repos); got != 1 {
+			t.Fatalf("expected 1 repo after remove-repo, got %d", got)
+		}
+	})
+}
+
 func TestAddRepoFromHTTPSRemote(t *testing.T) {
 	forEachUser(t, func(t *testing.T, env *env) {
 		if os.Getenv("GROVE_EXTERNAL_E2E") != "1" {

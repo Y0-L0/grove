@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	removeRepoRepos string
+	removeRepoRepos []string
 	removeRepoForce bool
 )
 
@@ -31,8 +31,8 @@ var removeRepoCmd = &cobra.Command{
 		}
 
 		var repoNames []string
-		if removeRepoRepos != "" {
-			repoNames = parseRepoFlag(removeRepoRepos)
+		if len(removeRepoRepos) > 0 {
+			repoNames = trimRepoNames(removeRepoRepos)
 		} else {
 			if len(ws.Repos) == 0 {
 				exitError("No repos in workspace")
@@ -57,7 +57,7 @@ var removeRepoCmd = &cobra.Command{
 }
 
 func init() {
-	removeRepoCmd.Flags().StringVarP(&removeRepoRepos, "repos", "r", "", "Comma-separated repo names")
+	removeRepoCmd.Flags().StringSliceVarP(&removeRepoRepos, "repos", "r", nil, "Repo names, comma-separated or repeated")
 	removeRepoCmd.Flags().BoolVarP(&removeRepoForce, "force", "f", false, "Skip worktree safety checks and confirmation")
 	removeRepoCmd.RegisterFlagCompletionFunc("repos", completeRemoveRepoNames)
 	removeRepoCmd.ValidArgsFunction = completeWorkspaceNames

@@ -22,7 +22,7 @@ import (
 var (
 	createType          string
 	createBranch        string
-	createRepos         string
+	createRepos         []string
 	createPreset        string
 	createAll           bool
 	createReplace       bool
@@ -62,11 +62,8 @@ var createCmd = &cobra.Command{
 			for _, r := range repos {
 				repoNames = append(repoNames, r.Name)
 			}
-		} else if createRepos != "" {
-			repoNames = strings.Split(createRepos, ",")
-			for i := range repoNames {
-				repoNames[i] = strings.TrimSpace(repoNames[i])
-			}
+		} else if len(createRepos) > 0 {
+			repoNames = trimRepoNames(createRepos)
 			// Clone any remote git URLs into the first repo_dir (mirrors add-repo).
 			// This lets a resolver pass an unmatched repo as a clone URL.
 			for i, name := range repoNames {
@@ -192,7 +189,7 @@ var createCmd = &cobra.Command{
 func init() {
 	createCmd.Flags().StringVar(&createType, "type", "work", "Workspace type: work or priv")
 	createCmd.Flags().StringVarP(&createBranch, "branch", "b", "", "Branch name")
-	createCmd.Flags().StringVarP(&createRepos, "repos", "r", "", "Comma-separated repo names")
+	createCmd.Flags().StringSliceVarP(&createRepos, "repos", "r", nil, "Repo names, comma-separated or repeated")
 	createCmd.Flags().StringVarP(&createPreset, "preset", "p", "", "Use named preset")
 	createCmd.Flags().BoolVar(&createAll, "all", false, "Use all discovered repos")
 	createCmd.Flags().BoolVar(&createReplace, "replace", false, "Delete the current workspace (detected from cwd) before creating the new one")
