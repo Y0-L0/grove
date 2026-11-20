@@ -12,8 +12,8 @@ import (
 
 // Hooks receives typed context at each workspace lifecycle phase.
 // ResolveBranch returns the branch for the next implementation. Returning
-// lifecycle.ErrNoHook skips an implementation. Resolver and OnClose errors abort;
-// other phases also accept non-aborting lifecycle.HookError values as warnings.
+// lifecycle.ErrNoHook skips an implementation. All other Go errors abort;
+// ShellHooks preserves the configured shell warning policy.
 type Hooks interface {
 	ResolveBranch(CreateRequest) (string, error)
 	PostCreate(models.Workspace) error
@@ -59,19 +59,32 @@ func (ShellHooks) ResolveBranch(req CreateRequest) (string, error) {
 }
 
 func (ShellHooks) PostCreate(ws models.Workspace) error {
-	return lifecycle.Run("post_create", lifecycleVars(ws))
+	return shellHookResult(lifecycle.Run("post_create", lifecycleVars(ws)))
 }
 
 func (ShellHooks) PostAddRepo(ws models.Workspace) error {
-	return lifecycle.Run("post_add_repo", lifecycleVars(ws))
+	return shellHookResult(lifecycle.Run("post_add_repo", lifecycleVars(ws)))
 }
 
 func (ShellHooks) PreDelete(ws models.Workspace) error {
-	return lifecycle.Run("pre_delete", lifecycleVars(ws))
+	return shellHookResult(lifecycle.Run("pre_delete", lifecycleVars(ws)))
 }
 
 func (ShellHooks) OnClose() error {
 	return lifecycle.Run("on_close", lifecycle.Vars{})
+}
+
+// Only the shell adapter may turn a lifecycle failure into a warning.
+type shellWarning struct{ error }
+
+func (w shellWarning) Unwrap() error { return w.error }
+
+func shellHookResult(err error) error {
+	var hookErr *lifecycle.HookError
+	if errors.As(err, &hookErr) && !lifecycle.ShouldAbort(err) {
+		return shellWarning{err}
+	}
+	return err
 }
 
 func (s *Service) hooks() []Hooks {
@@ -90,8 +103,8 @@ func (s *Service) runHooks(call func(Hooks) error) error {
 		if err == nil || errors.Is(err, lifecycle.ErrNoHook) {
 			continue
 		}
-		var hookErr *lifecycle.HookError
-		if !errors.As(err, &hookErr) || lifecycle.ShouldAbort(err) {
+		var warning shellWarning
+		if !errors.As(err, &warning) {
 			return err
 		}
 		s.warn(err)

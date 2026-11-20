@@ -74,6 +74,7 @@ pre_delete = "touch ` + pre + `"
 func TestHookMetadataStreamAndOnFailure(t *testing.T) {
 	forEachUser(t, func(t *testing.T, env *env) {
 		env.createRepo("svc-auth")
+		env.createRepo("svc-api")
 		env.init()
 
 		env.writeConfig(`[hooks.post_create]
@@ -93,9 +94,18 @@ on_failure = "abort"
 
 		env.writeConfig(`[hooks.post_create]
 command = "echo boom-details; exit 1"
+[hooks.post_add_repo]
+command = "exit 1"
+[hooks.pre_delete]
+command = "exit 1"
 `)
-		env.mustGW("create", "warn-ws", "--branch", env.branch("feat/warn"), "--repos", "svc-auth")
-		env.mustGW("delete", "warn-ws", "--force")
+		created := env.mustGW("create", "warn-ws", "--branch", env.branch("feat/warn"), "--repos", "svc-auth")
+		env.requireContains(created.combined(), "post_create hook failed", "shell warning")
+		added := env.mustGW("add-repo", "warn-ws", "--repos", "svc-api")
+		env.requireContains(added.combined(), "post_add_repo hook failed", "shell warning")
+		deleted := env.mustGW("delete", "warn-ws", "--force")
+		env.requireContains(deleted.combined(), "pre_delete hook failed", "shell warning")
+		env.requireMissing(env.workspacePath("warn-ws"))
 	})
 }
 

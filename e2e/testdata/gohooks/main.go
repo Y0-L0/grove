@@ -39,7 +39,7 @@ func record(phase string, ws models.Workspace) error {
 	}
 	f, err := os.OpenFile(filepath.Join(home, "hook-events"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	if err != nil {
-		return err
+		return &lifecycle.HookError{Hook: phase, Err: err}
 	}
 	_, writeErr := f.WriteString("go:" + phase + " " + ws.Name + " " + ws.Branch + " " + strings.Join(repos, ",") + "\n")
 	closeErr := f.Close()

@@ -93,24 +93,24 @@ func TestInvalidGoBranchStopsResolution(t *testing.T) {
 	}
 }
 
-func TestWarningAllowsLaterGoHookAndDelete(t *testing.T) {
+func TestGoHookCannotUseShellWarningPolicy(t *testing.T) {
 	var order []string
 	var warnings []string
 	deps := &fakeWorkspace{workspace: models.Workspace{Name: "login"}, order: &order}
+	blocked := &lifecycle.HookError{Hook: "pre_delete", Err: errors.New("blocked by Go hook")}
 	svc := Service{Workspace: deps, Store: deps,
 		Hooks: []Hooks{
 			testHooks{preDelete: func(models.Workspace) error {
-				return &lifecycle.HookError{Hook: "pre_delete", Err: errors.New("warning")}
+				return blocked
 			}},
 			testHooks{preDelete: func(models.Workspace) error { order = append(order, "Go hook"); return nil }},
 		},
 		Warn: func(message string) { warnings = append(warnings, message) },
 	}
 	result, err := svc.Delete(DeleteRequest{Name: "login"})
-	if err != nil || !result.Deleted || len(warnings) != 1 || warnings[0] != "pre_delete hook failed: warning" {
+	if !errors.Is(err, blocked) || result.Deleted || len(warnings) != 0 || len(order) != 0 {
 		t.Fatalf("delete = %+v, %v, warnings = %v", result, err, warnings)
 	}
-	assertOrder(t, order, "Go hook", "delete")
 }
 
 func TestDeletePolicyRunsWithHooksDisabled(t *testing.T) {
@@ -217,5 +217,5 @@ func (h testShellHooks) call(name string, vars lifecycle.Vars) error {
 	if run == nil {
 		run = lifecycle.Run
 	}
-	return run(name, vars)
+	return shellHookResult(run(name, vars))
 }
