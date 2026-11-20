@@ -257,6 +257,26 @@ state_dir = "~/grove-state"
 
 Presets, plugins, hooks, and the full command reference are covered in [Workflows](openwiki/workflows.md) and [Operations](openwiki/operations.md).
 
+### Optional sandbox
+
+Grove works with or without an agent sandbox and does not create or detect one.
+To let an agent use Grove while keeping host configuration read-only,
+provide the following in the sandbox:
+
+| Requirement | Purpose |
+|---|---|
+| The same absolute paths as the host | Worktree `.git` files and workspace state resolve in both environments |
+| Write access to workspace directories, repo directories and context repositories | The agent can create worktrees and commit workspace changes |
+| Read-only `~/.grove` and a writable `state_dir` | State updates leave host configuration and plugins protected |
+| `GIT_CONFIG_COUNT=1`, `GIT_CONFIG_KEY_0=commit.gpgsign`, `GIT_CONFIG_VALUE_0=false` | Agent commits stay unsigned while the host keeps its signing settings |
+| Read-only tokens through Git credential helpers, with no `~/.ssh` | The agent can fetch over HTTPS; the user pushes over SSH on the host |
+
+For example, set `state_dir = "~/git/agent/tasks/.grove"`
+and make that directory writable alongside the workspace directories.
+Commands that write `config.toml` fail with read-only configuration.
+Grove's log remains in `~/.grove`; logging is disabled when it cannot open that file.
+Git hooks and `.grove.toml` commands in writable repositories can still run on the host.
+
 ### Integrations
 
 - [grove-herdr](https://github.com/nicksenap/grove-herdr) — [Herdr](https://herdr.dev) plugin: `prefix+shift+g` prompts for a name, runs `gw create`, and opens the workspace in Herdr; hooks close it on `gw delete`.
