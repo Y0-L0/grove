@@ -19,6 +19,8 @@ const (
 	TSV       Format = "tsv"
 	Name      Format = "name"
 	Path      Format = "path"
+	// Wide is the table with every column a command can add, as in kubectl.
+	Wide Format = "wide"
 )
 
 // WriteJSON writes one indented JSON value.

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/BurntSushi/toml"
 	"github.com/nicksenap/grove/internal/gitops"
@@ -25,7 +26,8 @@ type IndexEntry struct {
 }
 
 // Index reads both configured contexts and the current active workspaces.
-func Index(cfg *models.Config) ([]IndexEntry, error) {
+// Only with details does it read each goal and scan Claude's transcripts for sessions.
+func Index(cfg *models.Config, details bool) ([]IndexEntry, error) {
 	active, err := state.NewStore(cfg.StateDir).Load()
 	if err != nil {
 		return nil, err
@@ -42,53 +44,75 @@ func Index(cfg *models.Config) ([]IndexEntry, error) {
 		if stored.Deleted.IsZero() {
 			continue
 		}
-		entry := IndexEntry{
-			Workspace: output.FromWorkspace(models.Workspace{Name: stored.Name, Type: stored.Type, Branch: stored.Branch, CreatedAt: stored.Created.Format("2006-01-02"), Path: filepath.Join(cfg.WorkspaceDir, stored.Type, stored.Name)}),
-			Status:    "deleted", Repositories: stored.Repositories,
-		}
-		baseRef, err := gitops.ResolveLocalBaseBranch(stored.source)
+		entry, err := deletedIndexEntry(stored, cfg.WorkspaceDir, details)
 		if err != nil {
 			return nil, err
 		}
-		goal, err := gitops.FileAt(stored.source, baseRef, filepath.ToSlash(filepath.Join("records", stored.Name, "TASK.md")))
-		if err != nil {
-			return nil, err
-		}
-		entry.Goal = goalSection(goal)
 		byName[stored.Name] = entry
 	}
 	for _, ws := range active {
-		entry, err := activeIndexEntry(ws)
+		entry, err := activeIndexEntry(ws, details)
 		if err != nil {
 			return nil, err
 		}
 		byName[ws.Name] = entry
 	}
-	if len(byName) == 0 {
-		return []IndexEntry{}, nil
-	}
-	transcripts, err := readSessions(earliestWorkspaceCreation(byName))
-	if err != nil {
-		return nil, err
-	}
 	entries := make([]IndexEntry, 0, len(byName))
 	for _, entry := range byName {
-		created := entry.recordCreated
-		if created == "" {
-			created = entry.CreatedAt
-		}
-		entry.Sessions = workspaceSessions(entry.Path, created, transcripts)
 		entries = append(entries, entry)
+	}
+	if details && len(entries) > 0 {
+		if err := addSessions(entries, earliestWorkspaceCreation(byName)); err != nil {
+			return nil, err
+		}
 	}
 	sort.Slice(entries, func(i, j int) bool { return entries[i].Name < entries[j].Name })
 	return entries, nil
 }
 
-func activeIndexEntry(ws models.Workspace) (IndexEntry, error) {
+func addSessions(entries []IndexEntry, earliest time.Time) error {
+	transcripts, err := readSessions(earliest)
+	if err != nil {
+		return err
+	}
+	for i, entry := range entries {
+		created := entry.recordCreated
+		if created == "" {
+			created = entry.CreatedAt
+		}
+		entries[i].Sessions = workspaceSessions(entry.Path, created, transcripts)
+	}
+	return nil
+}
+
+func deletedIndexEntry(stored storedEntry, workspaceDir string, details bool) (IndexEntry, error) {
+	entry := IndexEntry{
+		Workspace: output.FromWorkspace(models.Workspace{Name: stored.Name, Type: stored.Type, Branch: stored.Branch, CreatedAt: stored.Created.Format("2006-01-02"), Path: filepath.Join(workspaceDir, stored.Type, stored.Name)}),
+		Status:    "deleted", Repositories: stored.Repositories,
+	}
+	if !details {
+		return entry, nil
+	}
+	baseRef, err := gitops.ResolveLocalBaseBranch(stored.source)
+	if err != nil {
+		return entry, err
+	}
+	goal, err := gitops.FileAt(stored.source, baseRef, filepath.ToSlash(filepath.Join("records", stored.Name, "TASK.md")))
+	if err != nil {
+		return entry, err
+	}
+	entry.Goal = goalSection(goal)
+	return entry, nil
+}
+
+func activeIndexEntry(ws models.Workspace, details bool) (IndexEntry, error) {
 	entry := IndexEntry{Workspace: output.FromWorkspace(ws), Status: "active", Repositories: []string{}}
 	for _, repo := range ws.Repos {
 		if !repo.Context {
 			entry.Repositories = append(entry.Repositories, repo.RepoName)
+			continue
+		}
+		if !details {
 			continue
 		}
 		directory := filepath.Join(repo.WorktreePath, "records", ws.Name)

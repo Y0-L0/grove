@@ -137,7 +137,7 @@ func TestListIncludesActiveAndDeletedRecordsAcrossContexts(t *testing.T) {
 				t.Errorf("unexpected entry: %+v", entry)
 			}
 		}
-		table := e.mustGW("list").stdout
+		table := e.mustGW("list", "-o", "wide").stdout
 		e.requireContains(table, "Keep the deleted goal.", "table goal")
 		e.requireContains(table, "deleted", "table status")
 	})
@@ -215,7 +215,7 @@ func TestListTablePrintsOneLinePerWorkspace(t *testing.T) {
 		transcript := filepath.Join(e.home, ".claude", "projects", "any", "session.jsonl")
 		event, _ := json.Marshal(map[string]any{"sessionId": "session", "cwd": e.workspacePath("multi"), "timestamp": "2026-11-18T10:00:00Z", "aiTitle": "A session"})
 		e.writeFile(transcript, string(event)+"\n")
-		lines := strings.Split(strings.TrimRight(e.mustGW("list").stdout, "\n"), "\n")
+		lines := strings.Split(strings.TrimRight(e.mustGW("list", "-o", "wide").stdout, "\n"), "\n")
 		if len(lines) != 3 {
 			t.Fatalf("want a header and one line per workspace, got %d lines:\n%s", len(lines), strings.Join(lines, "\n"))
 		}
@@ -230,6 +230,30 @@ func TestListTablePrintsOneLinePerWorkspace(t *testing.T) {
 				t.Errorf("line %d: want sessions and goal %q, got %q", i+1, want, got)
 			}
 		}
+	})
+}
+
+func TestListDefaultTableSkipsGoalsAndSessions(t *testing.T) {
+	forEachUser(t, func(t *testing.T, e *env) {
+		e.createRepo("svc-auth")
+		e.init()
+		e.configureContext("work")
+		e.mustGW("create", "a", "--repos", "svc-auth")
+		e.writeFile(filepath.Join(e.workspacePath("a"), "records", "TASK.md"), "# A\n\n## Goal\nShip it.\n")
+		unreadable := filepath.Join(e.home, ".claude", "projects", "any", "unreadable.jsonl")
+		if err := os.MkdirAll(unreadable, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		lines := strings.Split(strings.TrimRight(e.mustGW("list").stdout, "\n"), "\n")
+		if got := strings.Join(strings.Fields(lines[0]), " "); got != "NAME TYPE STATUS BRANCH" {
+			t.Errorf("header: want NAME TYPE STATUS BRANCH, got %q", got)
+		}
+		if len(lines) != 2 || len(strings.Fields(lines[1])) != 4 {
+			t.Errorf("want one line with four columns, got:\n%s", strings.Join(lines, "\n"))
+		}
+		e.gw("list", "-o", "wide").mustFail(t)
+		e.gw("list", "a").mustFail(t)
+		e.gw("ws", "show", "a", "-o", "wide").mustFail(t)
 	})
 }
 

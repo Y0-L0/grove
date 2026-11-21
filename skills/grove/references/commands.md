@@ -11,7 +11,7 @@ Global flags: `--verbose` (debug log to `~/.grove/grove.log`), `-n`/`--no-hooks`
 | `gw create` | `gw create NAME [--type work\|priv] [-b BRANCH] (-r a,b \| -p PRESET \| --all)` | `-r/-p/--all` → picker; without NAME, supply `-b` or answer the branch prompt | No |
 | `gw create --replace` | `gw create NEW -b B -r a --replace -f` (run inside the workspace to replace) | prompt without `-f` | **Yes**: deletes the current workspace first, even if the create then fails |
 | `gw ws show` | `gw ws show [NAME] -o json\|path` | — (outside a workspace without NAME → error) | No |
-| `gw list` / `gw ws list` | `gw list [NAME] -o jsonl [-s]` (`-s` adds git status; NAME lists one workspace with its sessions) | — | No |
+| `gw list` / `gw ws list` | `gw list [NAME] -o jsonl [-s]` (`-s` adds git status; `-o wide` adds repositories, sessions and goals; NAME lists one workspace with its sessions) | — | No |
 | `gw status` | `gw status [NAME] -o jsonl [-P]` (`-P` adds PR status via gh/glab) | — | No |
 | `gw go` | `gw go NAME` (prints path, no newline) | >1 workspace → picker | `-d` deletes the workspace after navigating away |
 | `gw add-repo` | `gw add-repo [NAME] -r a,b` (names or git URLs; URLs clone into the first repo dir) | `-r` → picker | No |
@@ -42,9 +42,11 @@ HTTPS credentials come from Git's configuration.
 The `[types.work]` and `[types.priv]` tables each support a `context` repository path.
 Create adds the configured context worktree and commits the workspace's records.
 
-With context repositories configured, the default list includes active and deleted entries,
-the first line of each goal, repository names and the number of Claude sessions.
-`gw list NAME` prints one entry, active or deleted, followed by its sessions and their resume commands.
+With context repositories configured, the default list includes active and deleted entries
+with name, type, status and branch, and reads neither goals nor Claude transcripts.
+`-o wide` adds repository names, the number of Claude sessions and the first line of each goal.
+`gw list NAME` prints one entry, active or deleted, with every column,
+followed by its sessions and their resume commands.
 JSON entries add `status`, `goal`, `repositories` and `sessions`.
 Sessions include `id`, `first_timestamp`, `last_timestamp`, `ai_title`, `cwd`
 and `resume_command`.
@@ -70,7 +72,7 @@ Required create-name checks, rename records and reopen metadata run with `--no-h
 
 ## Output formats
 
-`-o`/`--output` on `list`, `ws list`, `ws show`, `status`, `repos`: `table` (default, do not parse), `json`, `jsonl`, `tsv`, `name`, `path`. `-j`/`--json` is an alias for `-o json`.
+`-o`/`--output` on `list`, `ws list`, `ws show`, `status`, `repos`: `table` (default, do not parse), `json`, `jsonl`, `tsv`, `name`, `path`. `list` and `ws list` also take `wide`, a table with more columns. `-j`/`--json` is an alias for `-o json`.
 
 `--json` only (no `-o`): `doctor`, `prune`, `prune branches`, `preset list`, `preset show`, `plugin list`, `plugin search`.
 

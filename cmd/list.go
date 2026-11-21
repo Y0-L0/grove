@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"os"
+	"slices"
 
 	"github.com/nicksenap/grove/internal/config"
 	"github.com/nicksenap/grove/internal/workflow"
@@ -68,19 +69,22 @@ var listCmd = &cobra.Command{
 
 func init() {
 	wsListCmd.Flags().BoolVarP(&listJSON, "json", "j", false, "Output as JSON (compatibility alias for --output json)")
-	wsListCmd.Flags().StringVarP(&listOutput, "output", "o", "", "Output format: table, json, jsonl, tsv, name, path")
+	wsListCmd.Flags().StringVarP(&listOutput, "output", "o", "", "Output format: table, wide, json, jsonl, tsv, name, path")
 	wsListCmd.Flags().BoolVarP(&listStatus, "status", "s", false, "Include git status")
 	wsShowCmd.Flags().BoolVarP(&wsShowJSON, "json", "j", false, "Output as JSON (compatibility alias for --output json)")
 	wsShowCmd.Flags().StringVarP(&wsShowOutput, "output", "o", "", "Output format: table, json, jsonl, tsv, name, path")
 	wsCmd.AddCommand(wsListCmd, wsShowCmd, wsDeleteCmd)
 
 	listCmd.Flags().BoolVarP(&listJSON, "json", "j", false, "Output as JSON (compatibility alias for --output json)")
-	listCmd.Flags().StringVarP(&listOutput, "output", "o", "", "Output format: table, json, jsonl, tsv, name, path")
+	listCmd.Flags().StringVarP(&listOutput, "output", "o", "", "Output format: table, wide, json, jsonl, tsv, name, path")
 	listCmd.Flags().BoolVarP(&listStatus, "status", "s", false, "Include git status")
 }
 
+// listOutputFormats adds kubectl's wide table to the query formats.
+var listOutputFormats = append(slices.Clone(queryOutputFormats), output.Wide)
+
 func doListAll(args []string) {
-	format, err := resolveQueryOutput(listOutput, listJSON)
+	format, err := output.Resolve(listOutput, listJSON, listOutputFormats...)
 	if err != nil {
 		exitError(err.Error())
 	}
@@ -90,7 +94,7 @@ func doListAll(args []string) {
 	}
 
 	if listStatus {
-		listWithStatus(format)
+		listWithStatus(tableForWide(format))
 		return
 	}
 
@@ -99,7 +103,8 @@ func doListAll(args []string) {
 		exitError(err.Error())
 	}
 	if cfg != nil && len(cfg.Types) > 0 {
-		entries, err := workflow.Index(cfg)
+		details := format == output.Wide || format == output.JSON || format == output.JSONLines
+		entries, err := workflow.Index(cfg, details)
 		if err != nil {
 			exitError(err.Error())
 		}
@@ -113,6 +118,7 @@ func doListAll(args []string) {
 		exitError(err.Error())
 	}
 
+	format = tableForWide(format)
 	if len(workspaces) == 0 && format == output.Table {
 		console.Info("No workspaces. Create one with: gw create <name> -r repo1,repo2 -b branch")
 		return
@@ -120,6 +126,15 @@ func doListAll(args []string) {
 	if err := writeWorkspaceList(os.Stdout, workspaces, format); err != nil {
 		exitError(err.Error())
 	}
+}
+
+// tableForWide maps the wide format to the table for lists without records,
+// whose table already shows every column.
+func tableForWide(format output.Format) output.Format {
+	if format == output.Wide {
+		return output.Table
+	}
+	return format
 }
 
 // listOne prints one index entry, active or deleted, with its sessions.
@@ -134,7 +149,7 @@ func listOne(name string, format output.Format) {
 	if cfg == nil || len(cfg.Types) == 0 {
 		exitError("gw list NAME needs context repositories; use gw ws show " + name)
 	}
-	entries, err := workflow.Index(cfg)
+	entries, err := workflow.Index(cfg, true)
 	if err != nil {
 		exitError(err.Error())
 	}

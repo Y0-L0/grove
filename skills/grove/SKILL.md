@@ -76,9 +76,10 @@ gw sync fix-auth                           # rebase every repo onto its base bra
 - `gw sync` skips dirty repos and aborts a failed rebase. It rewrites local branch history, so warn the user first if the branch is shared or already pushed.
 - `gw go NAME` also prints the path, but without a trailing newline and meant for the user's shell function. Prefer `gw ws show NAME -o path`.
 
-With context repositories configured, `gw list -o json` also includes deleted workspaces,
-their goals and Claude sessions with resume commands.
-`gw list NAME` shows one workspace with its sessions and resume commands.
+With context repositories configured, `gw list` also includes deleted workspaces.
+`gw list -o wide` adds repositories, session counts and goals,
+and `gw list -o json` carries the goals and Claude sessions with resume commands.
+`gw list NAME` shows one workspace with all of these.
 `gw rename OLD NEW` moves committed records and preserves every branch name.
 `gw reopen NAME` recreates only the context worktree and prints the command
 for adding the former code repositories.
