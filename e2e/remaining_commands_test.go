@@ -196,6 +196,30 @@ func TestListMatchesSessionsByAnyCwdWithDirectoryBoundaries(t *testing.T) {
 	})
 }
 
+func TestListTablePrintsOneLinePerWorkspace(t *testing.T) {
+	forEachUser(t, func(t *testing.T, e *env) {
+		e.createRepo("svc-auth")
+		e.init()
+		e.configureContext("work")
+		e.mustGW("create", "multi", "--repos", "svc-auth")
+		e.mustGW("create", "single", "--repos", "svc-auth")
+		e.writeFile(filepath.Join(e.workspacePath("multi"), "records", "TASK.md"), "# Multi\n\n## Goal\n\nThe first line of the goal\nwraps onto a second line.\n\n| Repo | MR |\n|---|---|\n| svc-auth | !1 |\n\n## State\n")
+		e.writeFile(filepath.Join(e.workspacePath("single"), "records", "TASK.md"), "# Single\n\n## Goal\nShip it.\n")
+		transcript := filepath.Join(e.home, ".claude", "projects", "any", "session.jsonl")
+		event, _ := json.Marshal(map[string]any{"sessionId": "session", "cwd": e.workspacePath("multi"), "timestamp": "2026-11-18T10:00:00Z", "aiTitle": "A session"})
+		e.writeFile(transcript, string(event)+"\n")
+		lines := strings.Split(strings.TrimRight(e.mustGW("list").stdout, "\n"), "\n")
+		if len(lines) != 3 {
+			t.Fatalf("want a header and one line per workspace, got %d lines:\n%s", len(lines), strings.Join(lines, "\n"))
+		}
+		for i, name := range []string{"multi", "single"} {
+			if fields := strings.Fields(lines[i+1]); len(fields) == 0 || fields[0] != name {
+				t.Errorf("line %d: want workspace %s, got %q", i+1, name, lines[i+1])
+			}
+		}
+	})
+}
+
 func TestSignFailurePushesNothing(t *testing.T) {
 	forEachUser(t, func(t *testing.T, e *env) {
 		source := e.createRepoWithHistory("svc-auth", 1)
