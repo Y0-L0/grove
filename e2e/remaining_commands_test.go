@@ -192,7 +192,14 @@ func TestListMatchesSessionsByAnyCwdWithDirectoryBoundaries(t *testing.T) {
 		for _, expected := range []string{"Review the workspace", "2026-11-18T10:00:00Z", "2026-11-18T11:00:00Z", "claude --resume", start} {
 			e.requireContains(string(encoded), expected, "session metadata")
 		}
-		e.requireContains(e.mustGW("list").stdout, "claude --resume", "table resume command")
+		table := e.mustGW("list").stdout
+		e.requireNotContains(table, "claude --resume", "resume command in the list of all workspaces")
+		one := e.mustGW("list", "a").stdout
+		for _, expected := range []string{"Review the workspace", "2026-11-18T10:00:00Z", "2026-11-18T11:00:00Z", "claude --resume 'match'", start} {
+			e.requireContains(one, expected, "sessions of one workspace")
+		}
+		e.requireNotContains(one, "outside", "session of another workspace")
+		e.gw("list", "missing").mustFail(t)
 	})
 }
 
@@ -215,6 +222,12 @@ func TestListTablePrintsOneLinePerWorkspace(t *testing.T) {
 		for i, name := range []string{"multi", "single"} {
 			if fields := strings.Fields(lines[i+1]); len(fields) == 0 || fields[0] != name {
 				t.Errorf("line %d: want workspace %s, got %q", i+1, name, lines[i+1])
+			}
+		}
+		e.requireContains(lines[0], "SESSIONS", "session count header")
+		for i, want := range []string{"1 The first line of the goal", "0 Ship it."} {
+			if got := strings.Join(strings.Fields(lines[i+1])[5:], " "); got != want {
+				t.Errorf("line %d: want sessions and goal %q, got %q", i+1, want, got)
 			}
 		}
 	})

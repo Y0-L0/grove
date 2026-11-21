@@ -372,6 +372,13 @@ func (e *env) requireContains(got, want, label string) {
 	}
 }
 
+func (e *env) requireNotContains(got, unwanted, label string) {
+	e.t.Helper()
+	if strings.Contains(got, unwanted) {
+		e.t.Fatalf("%s: did not expect %q in:\n%s", label, unwanted, got)
+	}
+}
+
 func workspaceNamed(list []workspaceJSON, name string) *workspaceJSON {
 	for i := range list {
 		if list[i].Name == name {

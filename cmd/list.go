@@ -31,12 +31,13 @@ var wsCmd = &cobra.Command{
 
 // wsListCmd is "gw ws list".
 var wsListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List all workspaces",
-	Args:  cobra.NoArgs,
+	Use:   "list [NAME]",
+	Short: "List all workspaces, or one with its sessions",
+	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		doListAll()
+		doListAll(args)
 	},
+	ValidArgsFunction: completeWorkspaceNames,
 }
 
 // wsShowCmd is "gw ws show [name]".
@@ -56,12 +57,13 @@ var wsShowCmd = &cobra.Command{
 
 // listCmd is the top-level alias "gw list" → "gw ws list".
 var listCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List all workspaces (shortcut for gw ws list)",
-	Args:  cobra.NoArgs,
+	Use:   "list [NAME]",
+	Short: "List all workspaces, or one with its sessions (shortcut for gw ws list)",
+	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		doListAll()
+		doListAll(args)
 	},
+	ValidArgsFunction: completeWorkspaceNames,
 }
 
 func init() {
@@ -77,10 +79,14 @@ func init() {
 	listCmd.Flags().BoolVarP(&listStatus, "status", "s", false, "Include git status")
 }
 
-func doListAll() {
+func doListAll(args []string) {
 	format, err := resolveQueryOutput(listOutput, listJSON)
 	if err != nil {
 		exitError(err.Error())
+	}
+	if len(args) > 0 {
+		listOne(args[0], format)
+		return
 	}
 
 	if listStatus {
@@ -114,6 +120,33 @@ func doListAll() {
 	if err := writeWorkspaceList(os.Stdout, workspaces, format); err != nil {
 		exitError(err.Error())
 	}
+}
+
+// listOne prints one index entry, active or deleted, with its sessions.
+func listOne(name string, format output.Format) {
+	if listStatus {
+		exitError("--status lists every workspace; drop NAME or use gw status")
+	}
+	cfg, err := config.Load()
+	if err != nil {
+		exitError(err.Error())
+	}
+	if cfg == nil || len(cfg.Types) == 0 {
+		exitError("gw list NAME needs context repositories; use gw ws show " + name)
+	}
+	entries, err := workflow.Index(cfg)
+	if err != nil {
+		exitError(err.Error())
+	}
+	for _, entry := range entries {
+		if entry.Name == name {
+			if err := writeIndexEntry(os.Stdout, entry, format); err != nil {
+				exitError(err.Error())
+			}
+			return
+		}
+	}
+	exitError("Workspace not found: " + name)
 }
 
 func listWithStatus(format output.Format) {

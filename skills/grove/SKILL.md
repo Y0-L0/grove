@@ -78,6 +78,7 @@ gw sync fix-auth                           # rebase every repo onto its base bra
 
 With context repositories configured, `gw list -o json` also includes deleted workspaces,
 their goals and Claude sessions with resume commands.
+`gw list NAME` shows one workspace with its sessions and resume commands.
 `gw rename OLD NEW` moves committed records and preserves every branch name.
 `gw reopen NAME` recreates only the context worktree and prints the command
 for adding the former code repositories.
