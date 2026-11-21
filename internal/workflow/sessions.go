@@ -8,8 +8,10 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -39,7 +41,7 @@ func readSessions(earliest time.Time) ([]transcriptSession, error) {
 	if err != nil {
 		return nil, err
 	}
-	sessions := []transcriptSession{}
+	recent := []string{}
 	for _, path := range paths {
 		info, err := os.Stat(path)
 		if os.IsNotExist(err) {
@@ -48,14 +50,36 @@ func readSessions(earliest time.Time) ([]transcriptSession, error) {
 		if err != nil {
 			return nil, err
 		}
-		if info.ModTime().Before(earliest) {
-			continue
+		if !info.ModTime().Before(earliest) {
+			recent = append(recent, path)
 		}
-		session, err := readTranscript(path)
+	}
+	return readTranscripts(recent)
+}
+
+// readTranscripts parses the transcripts concurrently, one per CPU,
+// and returns them in the order of paths.
+func readTranscripts(paths []string) ([]transcriptSession, error) {
+	sessions := make([]transcriptSession, len(paths))
+	errs := make([]error, len(paths))
+	next := make(chan int)
+	var wg sync.WaitGroup
+	for range min(runtime.GOMAXPROCS(0), len(paths)) {
+		wg.Go(func() {
+			for i := range next {
+				sessions[i], errs[i] = readTranscript(paths[i])
+			}
+		})
+	}
+	for i := range paths {
+		next <- i
+	}
+	close(next)
+	wg.Wait()
+	for i, err := range errs {
 		if err != nil {
-			return nil, fmt.Errorf("reading Claude transcript %s: %w", path, err)
+			return nil, fmt.Errorf("reading Claude transcript %s: %w", paths[i], err)
 		}
-		sessions = append(sessions, session)
 	}
 	return sessions, nil
 }
