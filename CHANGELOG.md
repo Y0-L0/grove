@@ -1,5 +1,40 @@
 # Changelog
 
+## v2.0.0
+
+First release of the fork `Y0-L0/grove`. It contains upstream v1.1.21.
+Install it with `brew install y0-l0/tap/grove`, from the `stadimeter` APT repository, with `mise use github:Y0-L0/grove` or with `scripts/install.sh`; see the README. Uninstall an upstream `gw` first.
+
+### Breaking
+
+- New workspaces live at `<workspace_dir>/<type>/<name>/`. Existing workspaces keep their paths.
+- `gw create NAME` no longer prompts for a branch. It derives `<owner_prefix>/<name>` from `owner_prefix` in `~/.grove/config.toml` and fails without it unless you pass `--branch`. With `--no-hooks` the branch is the workspace name.
+- `gw delete` checks every worktree first and refuses dirty or unregistered worktrees, unexpected branches, unpushed commits and temporary worktrees, reporting all of them at once. `--force` skips the checks.
+- `--track` requires `--branch`.
+- The update check, the upgrade hints and `scripts/install.sh` use the fork's releases.
+
+### Features
+
+- Workspace types: `gw create --type work|priv`, default `work`. Names stay unique across types, and `gw list -o json` shows the type.
+- Context repositories: `[types.<type>] context = "<path>"` adds that repository to every workspace of the type, on the workspace branch, with a `records` symlink to `records/<name>/`. Create commits `TASK.md` and `workspace.toml` there, unsigned. Delete commits the deletion date, rebases the records onto the context repository's base branch and fast-forwards the clone, even with `--force`.
+- `gw reopen NAME` brings back a deleted workspace's context worktree and records.
+- `gw rename` moves the records with the workspace.
+- `gw sign [NAME]` shows, signs and pushes the code branches of a workspace.
+- `gw list` lists active and deleted workspaces with name, type, status and branch. `-o wide` adds repositories, Claude sessions and the goal from `TASK.md`. `gw list NAME` shows one workspace with its sessions and resume commands.
+- Agent rules: with `agent_rules_template` set, create, add-repo and sync write the workspace's `AGENTS.md` from the template and the context worktree's `agent-rules.md`, and a `CLAUDE.md` that imports it.
+- Create and add-repo reuse a local branch first, then adopt `origin/<branch>` with its upstream, and only then create a branch from base without an upstream.
+- For HTTPS origins without a push URL, new worktrees get an SSH `remote.origin.pushurl`.
+- `state_dir` in `~/.grove/config.toml` moves `state.json` and `state.lock` out of `~/.grove`, so a sandbox can mount the configuration read-only. See "Optional sandbox" in the README.
+- Lifecycle hooks can be Go implementations registered in `main`. They run before the shell hooks, and their errors always abort.
+
+### Fixes
+
+- Repeated `-r` flags on create, add-repo and remove-repo add up instead of keeping only the last one.
+
+### Maintenance
+
+- Releases publish a Homebrew cask, a Debian package and the GitHub archives. A release workflow job installs each of them and runs `scripts/smoke-test.sh`.
+
 ## v1.1.21
 
 ### Features
