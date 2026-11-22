@@ -57,10 +57,13 @@ changelog:
 
 homebrew_casks:
   - name: grove
+    # A write deploy key of homebrew-tap; gh can create it, and it does not expire.
     repository:
       owner: y0-l0
       name: homebrew-tap
-      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+      git:
+        url: git@github.com:Y0-L0/homebrew-tap.git
+        private_key: "{{ .Env.HOMEBREW_TAP_DEPLOY_KEY }}"
     directory: Casks
     homepage: https://github.com/Y0-L0/grove
     description: "Git Worktree Workspace Orchestrator"

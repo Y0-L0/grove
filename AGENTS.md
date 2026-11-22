@@ -32,7 +32,8 @@ Git Worktree Workspace Orchestrator — CLI tool invoked as `gw`. Manages multi-
 
 Fork releases start at v2.0.0.
 The release workflow ignores v1 tags, which are upstream's.
-It needs the secrets `HOMEBREW_TAP_TOKEN`, `FURY_TOKEN` and `FURY_ACCOUNT`.
+It needs the secrets `HOMEBREW_TAP_DEPLOY_KEY`, the private half of a write deploy key of `Y0-L0/homebrew-tap`,
+and `FURY_TOKEN` and `FURY_ACCOUNT`.
 
 ## Per-repo config
 
