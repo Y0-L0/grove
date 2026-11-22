@@ -3,7 +3,10 @@ name: Release
 on:
   push:
     tags:
-      - "v*"
+      # Fork releases start at v2. The fork also carries upstream's v1 tags,
+      # and pushing one of those must not publish a fork release.
+      - "v[2-9].*"
+      - "v[1-9][0-9].*"
 
 permissions:
   contents: write
@@ -35,6 +38,11 @@ jobs:
       - name: Extract release notes
         id: notes
         run: |
+          heading=$(sed -n 's/^## //p' CHANGELOG.md | head -n1)
+          if [ "$heading" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::CHANGELOG.md starts with '$heading', not '$GITHUB_REF_NAME'"
+            exit 1
+          fi
           notes=$(bash scripts/release-notes.sh)
           {
             echo "RELEASE_HEADER<<EOF"
@@ -49,4 +57,16 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAP_GITHUB_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          FURY_TOKEN: ${{ secrets.FURY_TOKEN }}
+          FURY_ACCOUNT: ${{ secrets.FURY_ACCOUNT }}
+
+  # A release created with GITHUB_TOKEN starts no workflow on its own,
+  # so the release tests run as a job of this workflow.
+  test-release:
+    needs: release
+    permissions:
+      contents: read
+    uses: ./.github/workflows/test-release.yml
+    with:
+      version: ${{ github.ref_name }}

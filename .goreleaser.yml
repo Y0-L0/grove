@@ -26,6 +26,23 @@ archives:
 checksum:
   name_template: checksums.txt
 
+snapshot:
+  version_template: "{{ .Tag }}-next"
+
+nfpms:
+  - id: deb
+    package_name: grove
+    ids:
+      - gw
+    vendor: stadimeter
+    homepage: https://github.com/Y0-L0/grove
+    maintainer: "y0-l0 <jojo.dev@lohmer.com>"
+    description: "Git Worktree Workspace Orchestrator"
+    license: MIT
+    formats:
+      - deb
+    bindir: /usr/bin
+
 release:
   header: |
     {{ .Env.RELEASE_HEADER }}
@@ -38,17 +55,27 @@ changelog:
       - "^test:"
       - "^ci:"
 
-brews:
+homebrew_casks:
   - name: grove
     repository:
-      owner: nicksenap
-      name: homebrew-grove
-      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
-    directory: Formula
-    homepage: https://github.com/nicksenap/grove
+      owner: y0-l0
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    directory: Casks
+    homepage: https://github.com/Y0-L0/grove
     description: "Git Worktree Workspace Orchestrator"
     license: MIT
-    install: |
-      bin.install "gw"
-    test: |
-      assert_match version.to_s, shell_output("#{bin}/gw --version")
+    binaries:
+      - gw
+
+publishers:
+  - name: fury
+    ids:
+      - deb
+    checksum: false
+    signature: false
+    dir: "{{ dir .ArtifactPath }}"
+    cmd: >-
+      curl --silent --show-error --fail
+      -F package=@{{ .ArtifactName }}
+      https://{{ .Env.FURY_TOKEN }}@push.fury.io/{{ .Env.FURY_ACCOUNT }}/

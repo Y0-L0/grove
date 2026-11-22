@@ -1,0 +1,104 @@
+name: Release tests
+
+# Installs a published release the way each README method does
+# and runs scripts/smoke-test.sh against it.
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release tag to test, e.g. v2.0.0"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  VERSION: ${{ inputs.version }}
+
+jobs:
+  homebrew:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install via Homebrew
+        run: brew install y0-l0/tap/grove
+
+      - name: Smoke test
+        run: sh scripts/smoke-test.sh "$VERSION"
+
+  apt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # Fury can take a moment to index a package it has just received.
+      - name: Install via APT
+        run: |
+          echo 'deb [trusted=yes] https://apt.fury.io/stadimeter/ /' \
+            | sudo tee /etc/apt/sources.list.d/fury.list
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            sudo apt-get update -qq
+            if sudo apt-get install -y "grove=${VERSION#v}"; then
+              exit 0
+            fi
+            echo "attempt $attempt: grove ${VERSION#v} not installable yet"
+            sleep 30
+          done
+          exit 1
+
+      - name: Smoke test
+        run: sh scripts/smoke-test.sh "$VERSION"
+
+  install-script:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install via install.sh
+        run: GW_VERSION="$VERSION" GW_INSTALL_DIR="$RUNNER_TEMP/bin" sh scripts/install.sh
+
+      - name: Smoke test
+        run: GW="$RUNNER_TEMP/bin/gw" sh scripts/smoke-test.sh "$VERSION"
+
+  binary:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download and extract binary
+        run: |
+          mkdir -p "$RUNNER_TEMP/bin"
+          curl -fsSL "https://github.com/${{ github.repository }}/releases/download/$VERSION/gw_${VERSION#v}_linux_arm64.tar.gz" \
+            | tar -xz -C "$RUNNER_TEMP/bin" gw
+
+      - name: Smoke test
+        run: GW="$RUNNER_TEMP/bin/gw" sh scripts/smoke-test.sh "$VERSION"
+
+  mise:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: jdx/mise-action@v5
+        with:
+          install: false
+
+      - name: Install via mise
+        run: mise use --global "github:${{ github.repository }}@${VERSION#v}"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Smoke test
+        run: GW="$(mise which gw)" sh scripts/smoke-test.sh "$VERSION"

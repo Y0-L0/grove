@@ -24,7 +24,15 @@ Git Worktree Workspace Orchestrator — CLI tool invoked as `gw`. Manages multi-
 3. Tag + push: `just release X.Y.Z`
    - Creates annotated tag `vX.Y.Z`
    - Pushes tag to origin (triggers release workflow)
-   - GoReleaser builds binaries, prepends changelog notes, and updates Homebrew tap
+   - GoReleaser builds binaries and a .deb, prepends changelog notes,
+     updates the `y0-l0/homebrew-tap` cask and pushes the .deb to Fury
+   - The release workflow fails if the first `CHANGELOG.md` heading is not the tag
+   - It then runs `test-release.yml`, which installs the release by every README method;
+     rerun it by hand with `gh workflow run test-release.yml -f version=vX.Y.Z`
+
+Fork releases start at v2.0.0.
+The release workflow ignores v1 tags, which are upstream's.
+It needs the secrets `HOMEBREW_TAP_TOKEN`, `FURY_TOKEN` and `FURY_ACCOUNT`.
 
 ## Per-repo config
 
