@@ -78,7 +78,10 @@ publishers:
     checksum: false
     signature: false
     dir: "{{ dir .ArtifactPath }}"
+    # Both .deb files upload at once. For v2.0.0 Fury answered one of them,
+    # the first upload of a new package, with HTTP 500.
     cmd: >-
       curl --silent --show-error --fail
+      --retry 5 --retry-all-errors --retry-delay 10
       -F package=@{{ .ArtifactName }}
       https://{{ .Env.FURY_TOKEN }}@push.fury.io/{{ .Env.FURY_ACCOUNT }}/
