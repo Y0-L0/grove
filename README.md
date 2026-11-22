@@ -31,33 +31,58 @@ Grove is a single static binary with no dependencies. It requires `git` on `PATH
 ### 1. Install Grove
 
 For this fork, uninstall an existing upstream `gw` first.
-Then run this in the clone:
+Fork releases start at v2.0.0.
+
+**Homebrew** (macOS / Linux)
+
+```bash
+brew install y0-l0/tap/grove
+```
+
+**APT** (Debian / Ubuntu)
+
+```bash
+echo "deb [trusted=yes] https://apt.fury.io/stadimeter/ /" \
+  | sudo tee /etc/apt/sources.list.d/fury.list
+sudo apt update && sudo apt install grove
+```
+
+**mise**
+
+```bash
+mise use --global github:Y0-L0/grove
+```
+
+To write `grove` instead of `github:Y0-L0/grove`, add an alias to `~/.config/mise/config.toml`:
+
+```toml
+[tool_alias]
+grove = "github:Y0-L0/grove"
+```
+
+**Install script** (macOS / Linux, no package manager needed)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Y0-L0/grove/main/scripts/install.sh | sh
+```
+
+Verifies the release checksum and installs to `/usr/local/bin` (or `~/.local/bin` if that is not writable). Override with `GW_INSTALL_DIR` and `GW_VERSION`.
+
+**Binary** (Linux amd64; the release has darwin and arm64 archives too)
+
+```bash
+VERSION=2.0.0
+curl -fsSL "https://github.com/Y0-L0/grove/releases/download/v${VERSION}/gw_${VERSION}_linux_amd64.tar.gz" | tar -xz gw
+sudo mv gw /usr/local/bin/
+```
+
+**From a clone** (needs a Go toolchain)
 
 ```bash
 go install ./cmd/gw
 ```
 
-The methods below install upstream Grove.
-
-**Homebrew** (macOS / Linux)
-
-```bash
-brew install nicksenap/grove/grove
-```
-
-**Install script** (macOS / Linux, no Homebrew needed)
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/nicksenap/grove/master/scripts/install.sh | sh
-```
-
-Verifies the release checksum and installs to `/usr/local/bin` (or `~/.local/bin` if that is not writable). Override with `GW_INSTALL_DIR` and `GW_VERSION`.
-
-**Go install** (if you already have a Go toolchain)
-
-```bash
-go install github.com/nicksenap/grove/cmd/gw@latest
-```
+`go install github.com/...@latest` does not work for the fork, because its module path is still upstream's.
 
 ### 2. Add shell integration
 
@@ -313,6 +338,8 @@ If you installed with Homebrew:
 brew update && brew upgrade grove
 ```
 
+With APT, run `sudo apt update && sudo apt install --only-upgrade grove`.
+With mise, run `mise upgrade --bump github:Y0-L0/grove`.
 If you used the install script, re-run it to get the latest release.
 
 ## Documentation
