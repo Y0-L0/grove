@@ -33,9 +33,13 @@ esac
 version="${GW_VERSION:-}"
 if [ -z "$version" ]; then
   # Follow the releases/latest redirect; avoids GitHub API rate limits.
+  # Without any release, the redirect ends at .../releases instead of .../releases/tag/<tag>.
   final=$(curl -fsSIL -o /dev/null -w '%{url_effective}' "https://github.com/$REPO/releases/latest" || true)
-  version="${final##*/}"
-  if [ -z "$version" ] || [ "$version" = "latest" ]; then
+  case "$final" in
+    */releases/tag/*) version="${final##*/}" ;;
+    *) version="" ;;
+  esac
+  if [ -z "$version" ]; then
     auth=""
     [ -n "${GITHUB_TOKEN:-}" ] && auth="Authorization: Bearer $GITHUB_TOKEN"
     version=$(curl -fsSL ${auth:+-H "$auth"} "https://api.github.com/repos/$REPO/releases/latest" \
@@ -75,7 +79,7 @@ else
 fi
 [ "$expected" = "$actual" ] || fail "checksum mismatch for $archive"
 
-tar -xzf "$tmp/$archive" -C "$tmp" gw
+tar --no-same-owner -xzf "$tmp/$archive" -C "$tmp" gw
 chmod +x "$tmp/gw"
 mv "$tmp/gw" "$install_dir/gw"
 
