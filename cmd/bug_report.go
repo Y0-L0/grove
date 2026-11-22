@@ -17,7 +17,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const bugReportRepo = "nicksenap/grove"
+const bugReportRepo = "Y0-L0/grove"
 
 var bugReportPrint bool
 
