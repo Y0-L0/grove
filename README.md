@@ -266,8 +266,7 @@ If a hook commits more context records, deletion stops until those commits reach
 including with `--force`.
 Disable the mutating hook before retrying deletion.
 If it changed the context checkout's branch, merge that checkout's commits into the workspace branch first.
-Records-aware rename, the index command and reopen wait for slice 9.
-Do not rename context-bearing workspaces until records-aware rename is implemented.
+`gw rename` moves the records with the workspace, and `gw reopen NAME` brings back a deleted workspace's context worktree.
 `doctor --fix` retains missing context entries for path repair.
 A failed `post_create` leaves the created workspace in state;
 an attached context worktree remains tracked when records initialization or its commit fails.
