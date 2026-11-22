@@ -1,14 +1,14 @@
 #!/bin/sh
 # Install gw (Grove) from GitHub releases.
 #
-#   curl -fsSL https://raw.githubusercontent.com/nicksenap/grove/master/scripts/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/Y0-L0/grove/main/scripts/install.sh | sh
 #
 # Environment overrides:
-#   GW_VERSION      release tag to install (default: latest), e.g. v1.1.15 or 1.1.15
+#   GW_VERSION      release tag to install (default: latest), e.g. v2.0.0 or 2.0.0
 #   GW_INSTALL_DIR  target directory (default: /usr/local/bin if writable, else ~/.local/bin)
 set -eu
 
-REPO="nicksenap/grove"
+REPO="Y0-L0/grove"
 
 log() { printf '%s\n' "$*" >&2; }
 fail() { log "error: $*"; exit 1; }
@@ -20,7 +20,7 @@ need tar
 os=$(uname -s | tr '[:upper:]' '[:lower:]')
 case "$os" in
   darwin|linux) ;;
-  *) fail "unsupported OS: $os (use 'go install github.com/$REPO/cmd/gw@latest')" ;;
+  *) fail "unsupported OS: $os (build from a clone with 'go install ./cmd/gw')" ;;
 esac
 
 arch=$(uname -m)

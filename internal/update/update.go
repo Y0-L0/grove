@@ -100,7 +100,7 @@ func (c *Checker) fetchAndCache() {
 	os.Rename(tmp, c.CachePath)
 }
 
-const releasesLatestURL = "https://github.com/nicksenap/grove/releases/latest"
+const releasesLatestURL = "https://github.com/Y0-L0/grove/releases/latest"
 
 // fetchTimeout bounds the background release lookup. A var so tests can
 // exercise the timeout path without waiting.
@@ -208,12 +208,17 @@ func (c *Checker) UpgradeHint() string {
 	}
 	exe = filepath.ToSlash(exe)
 	switch {
-	case strings.Contains(exe, "/Cellar/") || strings.Contains(exe, "/homebrew/") || strings.Contains(exe, "/linuxbrew/"):
+	case strings.Contains(exe, "/Cellar/") || strings.Contains(exe, "/Caskroom/") || strings.Contains(exe, "/homebrew/") || strings.Contains(exe, "/linuxbrew/"):
 		return "brew update && brew upgrade grove"
+	case exe == "/usr/bin/gw":
+		return "sudo apt update && sudo apt install --only-upgrade grove"
+	case strings.Contains(exe, "/mise/installs/"):
+		return "mise upgrade --bump github:Y0-L0/grove"
 	case isGoBin(exe):
-		return "go install github.com/nicksenap/grove/cmd/gw@latest"
+		// The module path stays upstream's, so go install can only build the fork from a clone.
+		return "git pull && go install ./cmd/gw (in your grove clone)"
 	default:
-		return "curl -fsSL https://raw.githubusercontent.com/nicksenap/grove/master/scripts/install.sh | sh"
+		return "curl -fsSL https://raw.githubusercontent.com/Y0-L0/grove/main/scripts/install.sh | sh"
 	}
 }
 

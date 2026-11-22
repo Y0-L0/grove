@@ -221,9 +221,12 @@ func TestUpgradeHintByInstallMethod(t *testing.T) {
 	}{
 		{"/opt/homebrew/Cellar/grove/1.1.0/bin/gw", "brew update && brew upgrade grove"},
 		{"/home/linuxbrew/.linuxbrew/Cellar/grove/1.1.0/bin/gw", "brew update && brew upgrade grove"},
-		{"/gopath/bin/gw", "go install github.com/nicksenap/grove/cmd/gw@latest"},
-		{"/usr/local/bin/gw", "curl -fsSL https://raw.githubusercontent.com/nicksenap/grove/master/scripts/install.sh | sh"},
-		{"", "curl -fsSL https://raw.githubusercontent.com/nicksenap/grove/master/scripts/install.sh | sh"},
+		{"/opt/homebrew/Caskroom/grove/2.0.0/gw", "brew update && brew upgrade grove"},
+		{"/usr/bin/gw", "sudo apt update && sudo apt install --only-upgrade grove"},
+		{"/home/u/.local/share/mise/installs/github-y0-l0-grove/2.0.0/gw", "mise upgrade --bump github:Y0-L0/grove"},
+		{"/gopath/bin/gw", "git pull && go install ./cmd/gw (in your grove clone)"},
+		{"/usr/local/bin/gw", "curl -fsSL https://raw.githubusercontent.com/Y0-L0/grove/main/scripts/install.sh | sh"},
+		{"", "curl -fsSL https://raw.githubusercontent.com/Y0-L0/grove/main/scripts/install.sh | sh"},
 	}
 	for _, tt := range tests {
 		c := testChecker(t)
