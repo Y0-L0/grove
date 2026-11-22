@@ -33,3 +33,16 @@ fi
 "$gw" create smoke -r demo -b smoke
 "$gw" list
 "$gw" delete smoke --force
+
+# gw delete moves the workspace into .trash and starts a detached gw that
+# unlinks it. That process also creates ~/.grove/grove.log, so the cleanup
+# can only remove $tmp once the trash is empty.
+tries=0
+while [ -n "$(find "$HOME/.grove" -path '*/.trash/*' -prune -print)" ]; do
+  tries=$((tries + 1))
+  if [ "$tries" -gt 50 ]; then
+    echo "gw delete left its workspace in .trash" >&2
+    exit 1
+  fi
+  sleep 0.2
+done
