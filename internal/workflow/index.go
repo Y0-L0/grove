@@ -66,13 +66,23 @@ func Index(cfg *models.Config, details bool) ([]IndexEntry, error) {
 			return nil, err
 		}
 	}
-	sort.Slice(entries, func(i, j int) bool {
-		if deletedI, deletedJ := entries[i].Status == "deleted", entries[j].Status == "deleted"; deletedI != deletedJ {
-			return deletedJ
-		}
-		return entries[i].Name < entries[j].Name
-	})
+	sort.Slice(entries, func(i, j int) bool { return indexLess(entries[i], entries[j]) })
 	return entries, nil
+}
+
+// indexLess puts active workspaces before deleted ones,
+// then the default type before the others in alphabetical order, then sorts by name.
+func indexLess(a, b IndexEntry) bool {
+	if deletedA, deletedB := a.Status == "deleted", b.Status == "deleted"; deletedA != deletedB {
+		return deletedB
+	}
+	if a.Type != b.Type {
+		if a.Type == DefaultType || b.Type == DefaultType {
+			return a.Type == DefaultType
+		}
+		return a.Type < b.Type
+	}
+	return a.Name < b.Name
 }
 
 func addSessions(entries []IndexEntry, earliest time.Time) error {

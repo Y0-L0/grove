@@ -187,7 +187,7 @@ var createCmd = &cobra.Command{
 }
 
 func init() {
-	createCmd.Flags().StringVar(&createType, "type", "work", "Workspace type: work or priv")
+	createCmd.Flags().StringVar(&createType, "type", workflow.DefaultType, "Workspace type: work or priv")
 	createCmd.Flags().StringVarP(&createBranch, "branch", "b", "", "Branch name")
 	createCmd.Flags().StringSliceVarP(&createRepos, "repos", "r", nil, "Repo names, comma-separated or repeated")
 	createCmd.Flags().StringVarP(&createPreset, "preset", "p", "", "Use named preset")
