@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/mod/module"
 )
 
 // CacheData is the on-disk cache format.
@@ -56,6 +58,11 @@ func (c *Checker) GetNewerVersion(current string) string {
 	}
 
 	if cache == nil || cache.Latest == "" {
+		return ""
+	}
+	// A source build carries a Go pseudo-version. Its module path has no /v2,
+	// so Go derives it from the last v1 tag, and it says nothing about release order.
+	if module.IsPseudoVersion("v" + strings.TrimPrefix(current, "v")) {
 		return ""
 	}
 

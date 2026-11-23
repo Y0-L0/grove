@@ -380,3 +380,25 @@ func TestVersionFromTagURL(t *testing.T) {
 		}
 	}
 }
+
+func TestFormatNoticeIgnoresSourceBuildPseudoVersion(t *testing.T) {
+	c := testChecker(t)
+	cache := CacheData{LastCheck: time.Now().Unix(), Latest: "2.0.0"}
+	data, err := json.Marshal(cache)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(c.CachePath, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// A source build past v2.0.0: the module path has no /v2, so Go stamps a v1 pseudo-version.
+	for _, current := range []string{
+		"1.1.22-0.20261123132208-7b72de45fb53",
+		"1.1.22-0.20261123132208-7b72de45fb53+dirty",
+	} {
+		if got := c.FormatNotice(current); got != "" {
+			t.Errorf("FormatNotice(%q) = %q, want no notice", current, got)
+		}
+	}
+}
