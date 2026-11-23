@@ -17,6 +17,15 @@ type RepoWorktree struct {
 	PreserveBranch bool   `json:"preserve_branch,omitempty"`
 }
 
+// CheckStoredBranch reports a repo entry without a branch as corrupt state.
+// Git checks would otherwise run against a bare refs/heads/.
+func (r RepoWorktree) CheckStoredBranch(workspace string) error {
+	if r.Branch == "" {
+		return fmt.Errorf("corrupt state: workspace %s stores no branch for %s; set its branch in state.json", workspace, r.RepoName)
+	}
+	return nil
+}
+
 // Workspace represents a named collection of worktrees.
 type Workspace struct {
 	Name      string           `json:"name"`

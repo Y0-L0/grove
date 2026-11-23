@@ -13,6 +13,9 @@ import (
 )
 
 func checkRemoval(ws models.Workspace, opts RemoveOptions) error {
+	if err := checkStoredBranches(ws); err != nil {
+		return err
+	}
 	if !opts.RecordsMerged {
 		return preflightRemovals(ws.Repos, opts.Force)
 	}
@@ -51,8 +54,21 @@ func checkRecordsMerged(repo models.RepoWorktree) error {
 	return nil
 }
 
+func checkStoredBranches(ws models.Workspace) error {
+	var problems []error
+	for _, repo := range ws.Repos {
+		if err := repo.CheckStoredBranch(ws.Name); err != nil {
+			problems = append(problems, fmt.Errorf("%s: %w", repo.RepoName, err))
+		}
+	}
+	return errors.Join(problems...)
+}
+
 // CheckDelete collects every workspace deletion problem without changing Git or state.
 func CheckDelete(ws models.Workspace) error {
+	if err := checkStoredBranches(ws); err != nil {
+		return err
+	}
 	var problems []error
 	for _, repo := range ws.Repos {
 		for _, err := range checkDeleteRepo(repo) {
