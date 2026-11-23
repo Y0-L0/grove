@@ -437,3 +437,27 @@ func TestRemoveReposShowsProgressOnStderr(t *testing.T) {
 		})
 	}
 }
+
+func TestAddReposRefusesWorkspaceWithoutBranch(t *testing.T) {
+	env := setupTestEnv(t)
+	env.createRepo("api")
+	env.createRepo("web")
+	if err := env.createWorkspace("no-branch", "feat/no-branch", []string{"api"}); err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	ws, _ := env.svc.State.GetWorkspace("no-branch")
+	ws.Branch = ""
+	if err := env.svc.State.UpdateWorkspace(*ws); err != nil {
+		t.Fatalf("corrupt state: %v", err)
+	}
+
+	_, err := env.svc.AddRepos("no-branch", []string{"web"}, env.repoMap)
+
+	if err == nil || !strings.Contains(err.Error(), "workspace no-branch has no branch") {
+		t.Fatalf("expected a refusal naming the workspace, got: %v", err)
+	}
+	ws, _ = env.svc.State.GetWorkspace("no-branch")
+	if len(ws.Repos) != 1 {
+		t.Errorf("refused repo was stored: %+v", ws.Repos)
+	}
+}

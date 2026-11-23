@@ -41,6 +41,9 @@ func (s *Service) addReposLocked(wsName string, repoNames []string, repoMap map[
 	if ws == nil {
 		return nil, fmt.Errorf("workspace %s not found", wsName)
 	}
+	if ws.Branch == "" {
+		return nil, fmt.Errorf("workspace %s has no branch; set its branch in state.json", wsName)
+	}
 
 	existing := make(map[string]bool)
 	for _, r := range ws.Repos {
