@@ -42,7 +42,8 @@ HTTPS credentials come from Git's configuration.
 The `[types.work]` and `[types.priv]` tables each support a `context` repository path.
 Create adds the configured context worktree and commits the workspace's records.
 
-With context repositories configured, the default list includes active and deleted entries
+With context repositories configured, the default list includes active and deleted entries,
+each sorted by name with the deleted ones last,
 with name, type, status, the number of repositories besides the context repository and branch,
 and reads neither goals nor Claude transcripts.
 `-o wide` adds repository names, the number of Claude sessions and the first line of each goal.

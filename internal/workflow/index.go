@@ -66,7 +66,12 @@ func Index(cfg *models.Config, details bool) ([]IndexEntry, error) {
 			return nil, err
 		}
 	}
-	sort.Slice(entries, func(i, j int) bool { return entries[i].Name < entries[j].Name })
+	sort.Slice(entries, func(i, j int) bool {
+		if deletedI, deletedJ := entries[i].Status == "deleted", entries[j].Status == "deleted"; deletedI != deletedJ {
+			return deletedJ
+		}
+		return entries[i].Name < entries[j].Name
+	})
 	return entries, nil
 }
 

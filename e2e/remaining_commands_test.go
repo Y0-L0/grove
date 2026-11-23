@@ -143,6 +143,23 @@ func TestListIncludesActiveAndDeletedRecordsAcrossContexts(t *testing.T) {
 	})
 }
 
+func TestListPutsDeletedWorkspacesLast(t *testing.T) {
+	forEachUser(t, func(t *testing.T, e *env) {
+		e.createRepo("svc-auth")
+		e.init()
+		e.configureContext("work")
+		for _, name := range []string{"a-deleted", "b-active", "c-deleted", "d-active"} {
+			e.mustGW("create", name, "--repos", "svc-auth")
+		}
+		e.mustGW("delete", "a-deleted", "--force")
+		e.mustGW("delete", "c-deleted", "--force")
+		got := strings.Fields(e.mustGW("list", "-o", "name").stdout)
+		if want := "b-active d-active a-deleted c-deleted"; strings.Join(got, " ") != want {
+			t.Errorf("order: want %s, got %s", want, strings.Join(got, " "))
+		}
+	})
+}
+
 func TestListMatchesSessionsByAnyCwdWithDirectoryBoundaries(t *testing.T) {
 	forEachUser(t, func(t *testing.T, e *env) {
 		e.createRepo("svc-auth")
