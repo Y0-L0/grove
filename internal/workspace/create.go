@@ -93,6 +93,9 @@ func (s *Service) createWithOptsLocked(name string, opts CreateOpts) (models.Wor
 	if existing != nil {
 		return models.Workspace{}, fmt.Errorf("workspace %s already exists", name)
 	}
+	if branch == "" {
+		return models.Workspace{}, fmt.Errorf("workspace %s has no branch", name)
+	}
 
 	logging.Info("creating workspace %q (branch=%s, repos=%v)", name, branch, repoNames)
 

@@ -472,3 +472,17 @@ func TestCreateShowsProgressOnStderr(t *testing.T) {
 		t.Errorf("expected [2/2] progress, got: %q", output)
 	}
 }
+
+func TestCreateRefusesEmptyBranch(t *testing.T) {
+	env := setupTestEnv(t)
+	env.createRepo("api")
+
+	err := env.createWorkspace("no-branch", "", []string{"api"})
+
+	if err == nil || !strings.Contains(err.Error(), "workspace no-branch has no branch") {
+		t.Fatalf("expected a refusal naming the workspace, got: %v", err)
+	}
+	if ws, _ := env.svc.State.GetWorkspace("no-branch"); ws != nil {
+		t.Errorf("refused workspace was stored: %+v", ws)
+	}
+}
