@@ -89,13 +89,9 @@ func recordDeletion(ws models.Workspace, repo models.RepoWorktree) error {
 	if _, err := toml.Decode(string(data), &entry); err != nil {
 		return err
 	}
+	keepLocalDates(entry)
 	if _, exists := entry["deleted"]; !exists {
-		// Decode the date to retain TOML's local-date type when encoding the entry.
-		var date map[string]any
-		if _, err := toml.Decode("deleted = "+time.Now().Format("2006-01-02"), &date); err != nil {
-			return err
-		}
-		entry["deleted"] = date["deleted"]
+		entry["deleted"] = localDate(time.Now().Format("2006-01-02"))
 	}
 	repos := make([]string, 0, len(ws.Repos))
 	for _, r := range ws.Repos {
@@ -117,4 +113,24 @@ func recordDeletion(ws models.Workspace, repo models.RepoWorktree) error {
 		}
 	}
 	return nil
+}
+
+// localDate encodes as a bare TOML local date. The toml encoder converts a
+// decoded local date to UTC first, which moves it back a day east of UTC.
+type localDate string
+
+func (d localDate) MarshalTOML() ([]byte, error) { return []byte(d), nil }
+
+// keepLocalDates replaces decoded TOML local dates so that encoding writes them unchanged.
+func keepLocalDates(table map[string]any) {
+	for key, value := range table {
+		switch v := value.(type) {
+		case time.Time:
+			if v.Location().String() == "date-local" {
+				table[key] = localDate(v.Format("2006-01-02"))
+			}
+		case map[string]any:
+			keepLocalDates(v)
+		}
+	}
 }
