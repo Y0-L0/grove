@@ -225,7 +225,8 @@ func (c *Checker) UpgradeHint() string {
 		// The module path stays upstream's, so go install can only build the fork from a clone.
 		return "git pull && go install ./cmd/gw (in your grove clone)"
 	default:
-		return "curl -fsSL https://raw.githubusercontent.com/Y0-L0/grove/main/scripts/install.sh | sh"
+		// Grove installs several ways; point to them rather than pipe a script into sh.
+		return "see https://github.com/Y0-L0/grove#1-install-grove"
 	}
 }
 

@@ -225,8 +225,8 @@ func TestUpgradeHintByInstallMethod(t *testing.T) {
 		{"/usr/bin/gw", "sudo apt update && sudo apt install --only-upgrade grove"},
 		{"/home/u/.local/share/mise/installs/github-y0-l0-grove/2.0.0/gw", "mise upgrade --bump github:Y0-L0/grove"},
 		{"/gopath/bin/gw", "git pull && go install ./cmd/gw (in your grove clone)"},
-		{"/usr/local/bin/gw", "curl -fsSL https://raw.githubusercontent.com/Y0-L0/grove/main/scripts/install.sh | sh"},
-		{"", "curl -fsSL https://raw.githubusercontent.com/Y0-L0/grove/main/scripts/install.sh | sh"},
+		{"/usr/local/bin/gw", "see https://github.com/Y0-L0/grove#1-install-grove"},
+		{"", "see https://github.com/Y0-L0/grove#1-install-grove"},
 	}
 	for _, tt := range tests {
 		c := testChecker(t)
