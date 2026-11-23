@@ -461,3 +461,26 @@ func TestAddReposRefusesWorkspaceWithoutBranch(t *testing.T) {
 		t.Errorf("refused repo was stored: %+v", ws.Repos)
 	}
 }
+
+func TestAddReposFromDetachedSourceStoresWorkspaceBranch(t *testing.T) {
+	env := setupTestEnv(t)
+	env.createRepo("api")
+	web := env.createRepo("web")
+	if err := env.createWorkspace("detached", "feat/detached", []string{"api"}); err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	env.run(web, "git", "checkout", "-q", "--detach")
+
+	if _, err := env.svc.AddRepos("detached", []string{"web"}, env.repoMap); err != nil {
+		t.Fatalf("add: %v", err)
+	}
+
+	ws, _ := env.svc.State.GetWorkspace("detached")
+	repo := ws.FindRepo("web")
+	if repo == nil || repo.Branch != "feat/detached" {
+		t.Fatalf("stored entry = %+v, want branch feat/detached", repo)
+	}
+	if got := env.run(repo.WorktreePath, "git", "branch", "--show-current"); got != "feat/detached" {
+		t.Errorf("worktree is on %q, want feat/detached", got)
+	}
+}
