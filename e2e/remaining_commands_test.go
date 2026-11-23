@@ -226,7 +226,7 @@ func TestListTablePrintsOneLinePerWorkspace(t *testing.T) {
 		}
 		e.requireContains(lines[0], "SESSIONS", "session count header")
 		for i, want := range []string{"1 The first line of the goal", "0 Ship it."} {
-			if got := strings.Join(strings.Fields(lines[i+1])[5:], " "); got != want {
+			if got := strings.Join(strings.Fields(lines[i+1])[6:], " "); got != want {
 				t.Errorf("line %d: want sessions and goal %q, got %q", i+1, want, got)
 			}
 		}
@@ -245,11 +245,11 @@ func TestListDefaultTableSkipsGoalsAndSessions(t *testing.T) {
 			t.Fatal(err)
 		}
 		lines := strings.Split(strings.TrimRight(e.mustGW("list").stdout, "\n"), "\n")
-		if got := strings.Join(strings.Fields(lines[0]), " "); got != "NAME TYPE STATUS BRANCH" {
-			t.Errorf("header: want NAME TYPE STATUS BRANCH, got %q", got)
+		if got := strings.Join(strings.Fields(lines[0]), " "); got != "NAME TYPE STATUS REPOS BRANCH" {
+			t.Errorf("header: want NAME TYPE STATUS REPOS BRANCH, got %q", got)
 		}
-		if len(lines) != 2 || len(strings.Fields(lines[1])) != 4 {
-			t.Errorf("want one line with four columns, got:\n%s", strings.Join(lines, "\n"))
+		if len(lines) != 2 || len(strings.Fields(lines[1])) != 5 || strings.Fields(lines[1])[3] != "1" {
+			t.Errorf("want one line with five columns and one repository, got:\n%s", strings.Join(lines, "\n"))
 		}
 		e.gw("list", "-o", "wide").mustFail(t)
 		e.gw("list", "a").mustFail(t)

@@ -43,7 +43,8 @@ The `[types.work]` and `[types.priv]` tables each support a `context` repository
 Create adds the configured context worktree and commits the workspace's records.
 
 With context repositories configured, the default list includes active and deleted entries
-with name, type, status and branch, and reads neither goals nor Claude transcripts.
+with name, type, status, the number of repositories besides the context repository and branch,
+and reads neither goals nor Claude transcripts.
 `-o wide` adds repository names, the number of Claude sessions and the first line of each goal.
 `gw list NAME` prints one entry, active or deleted, with every column,
 followed by its sessions and their resume commands.

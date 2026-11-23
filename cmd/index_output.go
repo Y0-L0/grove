@@ -12,8 +12,9 @@ import (
 )
 
 // writeIndex renders the index with one line per workspace. The table and TSV
-// formats print name, type, status and branch; the wide format adds the
-// repositories, the session count and the first line of the goal.
+// formats print name, type, status, the number of repositories besides
+// the context repository and branch; the wide format adds their names,
+// the session count and the first line of the goal.
 // The sessions themselves appear only in JSON and in writeIndexEntry.
 func writeIndex(w io.Writer, entries []workflow.IndexEntry, format output.Format) error {
 	switch format {
@@ -49,13 +50,13 @@ func writeIndex(w io.Writer, entries []workflow.IndexEntry, format output.Format
 }
 
 func indexRows(entries []workflow.IndexEntry, wide bool) [][]string {
-	header := []string{"Name", "Type", "Status", "Branch"}
+	header := []string{"Name", "Type", "Status", "Repos", "Branch"}
 	if wide {
 		header = append(header, "Repositories", "Sessions", "Goal")
 	}
 	rows := [][]string{header}
 	for _, entry := range entries {
-		row := []string{entry.Name, entry.Type, entry.Status, entry.Branch}
+		row := []string{entry.Name, entry.Type, entry.Status, strconv.Itoa(len(entry.Repositories)), entry.Branch}
 		if wide {
 			row = append(row, strings.Join(entry.Repositories, ","), strconv.Itoa(len(entry.Sessions)), firstLine(entry.Goal))
 		}
