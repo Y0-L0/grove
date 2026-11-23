@@ -116,10 +116,38 @@ For many workspaces: `gw prune --min-age 14d --json` lists old candidates. Show 
 
 Install one way (the user may prefer one):
 
+**Homebrew (macOS/Linux):**
 ```bash
-brew install nicksenap/grove/grove
-curl -fsSL https://raw.githubusercontent.com/nicksenap/grove/master/scripts/install.sh | sh
-go install github.com/nicksenap/grove/cmd/gw@latest
+brew install y0-l0/tap/grove
+```
+
+**APT (Debian/Ubuntu):**
+```bash
+echo "deb [trusted=yes] https://apt.fury.io/stadimeter/ /" \
+  | sudo tee /etc/apt/sources.list.d/fury.list
+sudo apt update && sudo apt install grove
+```
+
+**mise:**
+```bash
+mise use --global github:Y0-L0/grove
+```
+
+**Binary (Linux amd64):**
+```bash
+VERSION=2.0.0
+curl -fsSL "https://github.com/Y0-L0/grove/releases/download/v${VERSION}/gw_${VERSION}_linux_amd64.tar.gz" | tar -xz gw
+sudo mv ./gw /usr/local/bin/
+```
+
+**Install script:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/Y0-L0/grove/main/scripts/install.sh | sh
+```
+
+**From a clone** (`go install ...@latest` does not work, the module path is still upstream's):
+```bash
+go install ./cmd/gw
 ```
 
 Then:
