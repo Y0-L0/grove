@@ -1,5 +1,26 @@
 # Changelog
 
+## v2.1.0
+
+### Features
+
+- The `gw list` table and TSV have a `Repos` column before `Branch` with the number of repositories besides the context repository. In TSV the branch moves from the fourth to the fifth column. JSON is unchanged.
+- `gw list` sorts active workspaces before deleted ones in every output format. Within each status, `work` comes first, the other types follow alphabetically, and names sort within each type.
+
+### Fixes
+
+- `gw create` and `gw add-repo` refuse a workspace without a branch. Before, state stored `"branch": ""` and git failed later on an invalid ref.
+- `gw delete` reports a stored empty branch as corrupt state and names the workspace and repository, even with `--force`. Before, the checks ran git against `refs/heads/`.
+- Deleting a workspace keeps the `created` date in `workspace.toml` and sets `deleted` to the local date. East of UTC, both dates used to move back one day on every run.
+- A build from source no longer announces v2.0.0 as an update.
+- When the install method is unknown, the update notice links the README's install section instead of piping `scripts/install.sh` into `sh`.
+
+### Maintenance
+
+- The release retries a failed Fury upload five times, ten seconds apart.
+- The smoke test waits for `gw delete`'s background trash cleanup, which made it fail on macOS.
+- The grove skill lists the fork's install methods instead of upstream's.
+
 ## v2.0.0
 
 First release of the fork `Y0-L0/grove`. It contains upstream v1.1.21.
